@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// المستخدمون (مزامنة مع Clerk عبر Webhook)
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id // Clerk userId
+  email     String   @unique
+  name      String?
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // العلاقات
+  stockMovements StockMovement[]
+  createdOrders  Order[]         @relation("CreatedBy")
+  supplier       Supplier?       @relation("SupplierUser")
+  alerts         Alert[]
+}
+
+enum Role {
+  admin
+  employee
+  supplier
+}
+
+// ─────────────────────────────────────────
+// الفئات (Admin فقط)
+// ─────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+// ─────────────────────────────────────────
+// الموردون (Admin فقط للإدارة)
+// ─────────────────────────────────────────
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  createdAt DateTime @default(now())
+
+  // ربط بحساب Clerk — مورد مدعو عبر Invitation
+  userId String? @unique
+  user   User?   @relation("SupplierUser", fields: [userId], references: [id])
+
+  products Product[]
+  orders   Order[]
+}
+
+// ─────────────────────────────────────────
+// المنتجات (Admin + Employee)
+// ─────────────────────────────────────────
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  sku         String    @unique
+  description String?
+  unit        String    @default("قطعة") // قطعة، علبة، زجاجة...
+  quantity    Int       @default(0)
+  minQuantity Int       @default(10) // حد التنبيه
+  price       Decimal   @db.Decimal(10, 2)
+  expiryDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  stockMovements StockMovement[]
+  orderItems     OrderItem[]
+  alerts         Alert[]
+}
+
+// ─────────────────────────────────────────
+// حركات المخزون (Admin + Employee)
+// ─────────────────────────────────────────
+
+model StockMovement {
+  id        String       @id @default(cuid())
+  type      MovementType
+  quantity  Int
+  note      String?
+  createdAt DateTime     @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+enum MovementType {
+  IN  // وارد
+  OUT // صادر
+}
+
+// ─────────────────────────────────────────
+// طلبات الشراء (Admin + Employee + Supplier)
+// ─────────────────────────────────────────
+
+model Order {
+  id        String      @id @default(cuid())
+  status    OrderStatus @default(PENDING)
+  note      String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // من أنشأ الطلب (موظف أو أدمن)
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  // المورد المستهدف — يرى الطلب ويحدث حالته
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  // تواريخ الشحن والاستلام (يحدثها المورد والموظف)
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+
+  items OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING   // بانتظار موافقة الأدمن
+  APPROVED  // موافق عليه
+  REJECTED  // مرفوض
+  SHIPPED   // تم الشحن — يحدثه المورد
+  DELIVERED // تم الاستلام — يحدثه الموظف
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2) // snapshot للسعر وقت الطلب
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// التنبيهات
+// userId = null  → تنبيه عام يراه الأدمن
+// userId = موجود → تنبيه موجه للموظف المحدد
+// ─────────────────────────────────────────
+
+model Alert {
+  id        String    @id @default(cuid())
+  type      AlertType
+  message   String
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  // المنتج المرتبط بالتنبيه (اختياري)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  // المستلم (null = أدمن، موجود = موظف محدد)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+}
+
+enum AlertType {
+  LOW_STOCK // مخزون منخفض
+  EXPIRY    // قرب انتهاء الصلاحية
+  ORDER     // طلب جديد أو تحديث
+}
