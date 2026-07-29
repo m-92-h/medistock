@@ -1,8 +1,8 @@
 import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import logo from "../../../../../public/images/logo.svg";
 import { DemoButtons } from "@/components/auth/DemoButtons";
 import { Separator } from "@/components/ui/separator";
+import logo from "../../../../../public/images/logo.svg";
 import Image from "next/image";
 
 export const metadata: Metadata = {
@@ -17,8 +17,8 @@ export default function SignInPage() {
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm space-y-6">
-          <div className="flex flex-col items-center gap-0.5 sm:gap-3 text-center">
-            <Image src={logo} className="flex h-24 w-24 items-center justify-center rounded-2xl" alt="logo" />
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Image src={logo} className="flex size-12 sm:size-18 items-center justify-center rounded-2xl" alt="logo" />
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">MediStock</h1>
               <p className="mt-1 text-sm text-muted-foreground">Medical Inventory Management</p>

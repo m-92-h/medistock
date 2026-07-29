@@ -191,8 +191,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
   html {
     @apply font-sans;
   }
+
+  :root,
+  .dark {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0.02 250 / 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.7 0.02 250 / 0.5);
+  }
+}
+
+/* setting clerk => Hide UserButton footer and 'Manage account'*/
+.cl-userButtonPopoverFooter,
+.cl-devModeBadge,
+.cl-userButtonPopoverActionButton__manageAccount {
+  display: none !important;
 }
