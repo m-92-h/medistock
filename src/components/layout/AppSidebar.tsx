@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, UserPlus, type LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -118,6 +118,12 @@ const navGroups: {
         label: "Users",
         href: "/users",
         icon: Users,
+        roles: ["admin"],
+      },
+      {
+        label: "Invites",
+        href: "/invites",
+        icon: UserPlus,
         roles: ["admin"],
       },
     ],
