@@ -4,8 +4,9 @@
 
 ---
 
-## الأدوار والصلاحيات
+اقوم ببناء موقع ويب لنظام مخزن طبي يديره 3 اشخاص وبلاحيات مختلفة لكل دور وكما يلي:
 
+```
 | الصلاحية | Admin | Employee | Supplier |
 |---|:---:|:---:|:---:|
 | Dashboard (محتوى مخصص) | ✅ | ✅ | ✅ |
@@ -21,10 +22,64 @@
 | إدارة المستخدمين | ✅ | ❌ | ❌ |
 | إرسال دعوات | ✅ | ❌ | ❌ |
 | التنبيهات | ✅ (كل) | ✅ (خاصة) | ❌ |
+```
 
----
+ ولقد ارفقت كود السكيما وايضا بالنسبة لهيكلة او مخطط المجلدات الحالي فهو كالتالي: (.
+./.env
+./.git
+./.gitignore
+./.next
+./components.json
+./eslint.config.mjs
+./next.config.ts
+./next-env.d.ts
+./node_modules
+./package.json
+./package-lock.json
+./postcss.config.mjs
+./prisma
+./prisma.config.ts
+./prisma/schema.prisma
+./public
+./public/images
+./public/images/logo.svg
+./public/info-system
+./public/info-system/auth_flow.png
+./public/info-system/system_flow.png
+./public/schema.prisma
+./README.md
+./src
+./src/app
+./src/app/(auth)
+./src/app/(auth)/sign-in
+./src/app/(auth)/sign-in/[[...sign-in]]
+./src/app/(auth)/sign-in/[[...sign-in]]/page.tsx
+./src/app/(root)
+./src/app/(root)/layout.tsx
+./src/app/actions
+./src/app/actions/demo-login.ts
+./src/app/favicon.ico
+./src/app/globals.css
+./src/app/layout.tsx
+./src/app/page.tsx
+./src/components
+./src/components/auth
+./src/components/auth/DemoBanner.tsx
+./src/components/auth/DemoButtons.tsx
+./src/components/layout
+./src/components/layout/AppNavbar.tsx
+./src/components/layout/AppSidebar.tsx
+./src/components/theme
+./src/components/theme/theme-provider.tsx
+./src/components/ui
+./src/hooks
+./src/hooks/use-mobile.ts
+./src/lib
+./src/lib/utils.ts
+./src/proxy.ts
+./tsconfig.json)
 
-## هيكل المجلدات الكامل
+وجميع هذه الصفحات تم الانتهاء من بنائها والتاكد 100% من ان كل شيء يعمل بشكل صحيح وما اريده هو فقط بناء باقي الصفحات وملفات الapi المطلوبة لاكمال الموقع علما ان هيكل المجلدات الكامل يكون كالتالي: 
 
 ```
 medistock/
@@ -37,19 +92,18 @@ medistock/
 ├── tsconfig.json
 │
 ├── prisma/
-│   └── schema.prisma             # ✅ السكيما النهائية
+│   └── schema.prisma           
 │
 ├── public/
 │   └── images/
 │       └── logo.svg
 │
-└── src/
-    ├── middleware.ts             # ⚠️ يجب أن يكون هذا الاسم (وليس proxy.ts)
-    │                             # Clerk auth + role-based route protection
+└── src/        
+    ├── proxy.ts                  # Clerk auth + role-based route protection
     │
     ├── lib/
-    │   ├── utils.ts              # cn() + helpers
-    │   ├── prisma.ts             # PrismaClient singleton مع pg adapter
+    │   ├── utils.ts              # cn() 
+    │   ├── prisma.ts             
     │   └── auth.ts               # getCurrentUser() من Clerk + Prisma
     │
     ├── hooks/
@@ -57,18 +111,6 @@ medistock/
     │
     ├── components/
     │   ├── ui/                   # shadcn/ui components
-    │   │   ├── alert.tsx
-    │   │   ├── badge.tsx
-    │   │   ├── breadcrumb.tsx
-    │   │   ├── button.tsx
-    │   │   ├── input.tsx
-    │   │   ├── popover.tsx
-    │   │   ├── separator.tsx
-    │   │   ├── sheet.tsx
-    │   │   ├── sidebar.tsx
-    │   │   ├── skeleton.tsx
-    │   │   └── tooltip.tsx
-    │   │
     │   ├── auth/
     │   │   ├── DemoBanner.tsx
     │   │   └── DemoButtons.tsx
@@ -207,100 +249,58 @@ medistock/
                                       # guard: Admin فقط
 ```
 
----
-
-## Middleware — حماية المسارات
+واما بالنسبة لبيئة العمل فهي كالتالي:
 
 ```
-src/middleware.ts   ← الاسم الصحيح الذي يقرأه Next.js
-```
-
-منطق الحماية:
-
-```
-/dashboard          → أي مستخدم مسجل دخول
-/products/*         → admin | employee
-/stock/*            → admin | employee
-/orders             → admin | employee | supplier
-/orders/new         → admin | employee
-/orders/[id]        → admin | employee | supplier (مع فلتر في الـ API)
-/alerts             → admin | employee
-/categories         → admin
-/suppliers          → admin
-/reports            → admin
-/users              → admin
-/invite             → admin
-```
-
----
-
-## lib/prisma.ts — الصيغة الصحيحة مع pg adapter
-
-```ts
-import { PrismaClient } from "@/app/generated/prisma"
-import { PrismaPg } from "@prisma/adapter-pg"
-import { Pool } from "pg"
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaPg(pool)
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({ adapter })
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
-```
-
----
-
-## lib/auth.ts — helper لقراءة المستخدم الحالي
-
-```ts
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
-
-export async function getCurrentUser() {
-  const { userId } = await auth()
-  if (!userId) return null
-
-  return prisma.user.findUnique({
-    where: { id: userId },
-    include: { supplier: true },
-  })
+{
+  "name": "medistock",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mohamed_Hussein",
+    "email": "mohamed.h92t@gmail.com"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "postinstall": "prisma generate",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@clerk/nextjs": "^7.6.2",
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
+    "lucide-react": "^1.27.0",
+    "next": "16.2.12",
+    "next-themes": "^0.4.6",
+    "pg": "^8.22.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.10.1",
+    "shadcn": "^4.16.0",
+    "svix": "^1.99.1",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "prisma": "^7.9.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.1",
+    "typescript": "^5"
+  }
 }
 ```
 
----
-
-## ترتيب خطوات الـ Migration
-
-```bash
-# 1. استبدل prisma/schema.prisma بالملف المرفق
-
-# 2. تأكد من .env
-DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require"
-
-# 3. تأكد من prisma.config.ts
-#    (earlyAccess: true إذا كنت تستخدم Prisma 7)
-
-# 4. Generate أولاً للتحقق من صحة السكيما
-npx prisma generate
-
-# 5. Migration
-npx prisma migrate dev --name init
-
-# 6. تحقق بصري
-npx prisma studio
-```
-
----
-
-## ملاحظات مهمة
-
-- **`proxy.ts`** يجب إعادة تسميته إلى **`middleware.ts`** وإلا Next.js لن يعترف به
-- **Webhook Clerk** في `/api/webhooks/clerk/route.ts` هو المسؤول الوحيد عن إنشاء `User` في Prisma — لا تنشئ users يدوياً
-- **`Alert.userId = null`** تعني تنبيه للأدمن، و`userId = موجود` تعني تنبيه للموظف المحدد
-- **`OrderItem.unitPrice`** يحتفظ بسعر المنتج وقت الطلب بغض النظر عن تغيير السعر لاحقاً — هذا مقصود
-- **`StockMovement` onDelete: Restrict** يمنع حذف منتج أو مستخدم إذا كان له حركات مخزون — مناسب لنظام طبي
+وكما ارفقت لك بعض الملفات التي يجب ان تقرائها لتفهم الموقع بالشكل المطلوب ولتجنب الخطا واذا كان لديك بعض الاسئلة قبل البدء اسئل لتجنب الاخطاء.
