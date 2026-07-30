@@ -24,62 +24,7 @@
 | التنبيهات | ✅ (كل) | ✅ (خاصة) | ❌ |
 ```
 
- ولقد ارفقت كود السكيما وايضا بالنسبة لهيكلة او مخطط المجلدات الحالي فهو كالتالي: (.
-./.env
-./.git
-./.gitignore
-./.next
-./components.json
-./eslint.config.mjs
-./next.config.ts
-./next-env.d.ts
-./node_modules
-./package.json
-./package-lock.json
-./postcss.config.mjs
-./prisma
-./prisma.config.ts
-./prisma/schema.prisma
-./public
-./public/images
-./public/images/logo.svg
-./public/info-system
-./public/info-system/auth_flow.png
-./public/info-system/system_flow.png
-./public/schema.prisma
-./README.md
-./src
-./src/app
-./src/app/(auth)
-./src/app/(auth)/sign-in
-./src/app/(auth)/sign-in/[[...sign-in]]
-./src/app/(auth)/sign-in/[[...sign-in]]/page.tsx
-./src/app/(root)
-./src/app/(root)/layout.tsx
-./src/app/actions
-./src/app/actions/demo-login.ts
-./src/app/favicon.ico
-./src/app/globals.css
-./src/app/layout.tsx
-./src/app/page.tsx
-./src/components
-./src/components/auth
-./src/components/auth/DemoBanner.tsx
-./src/components/auth/DemoButtons.tsx
-./src/components/layout
-./src/components/layout/AppNavbar.tsx
-./src/components/layout/AppSidebar.tsx
-./src/components/theme
-./src/components/theme/theme-provider.tsx
-./src/components/ui
-./src/hooks
-./src/hooks/use-mobile.ts
-./src/lib
-./src/lib/utils.ts
-./src/proxy.ts
-./tsconfig.json)
-
-وجميع هذه الصفحات تم الانتهاء من بنائها والتاكد 100% من ان كل شيء يعمل بشكل صحيح وما اريده هو فقط بناء باقي الصفحات وملفات الapi المطلوبة لاكمال الموقع علما ان هيكل المجلدات الكامل يكون كالتالي: 
+## وادناه المخطط الحالي للمشروع:
 
 ```
 medistock/
@@ -249,7 +194,7 @@ medistock/
                                       # guard: Admin فقط
 ```
 
-واما بالنسبة لبيئة العمل فهي كالتالي:
+## واما بالنسبة لبيئة العمل فهي كالتالي:
 
 ```
 {
@@ -303,4 +248,4 @@ medistock/
 }
 ```
 
-وكما ارفقت لك بعض الملفات التي يجب ان تقرائها لتفهم الموقع بالشكل المطلوب ولتجنب الخطا واذا كان لديك بعض الاسئلة قبل البدء اسئل لتجنب الاخطاء.
+وانا قمت ببناء اغلب صفحات المخطط وما اريده هو فقط ان تساعدني على اكمال الصفحات التي ساطلبها منك هل جاهز؟ واذا لديك بعض الاسئلة او تحتاج لمعرفة كود معين من الملفات اخبرني قبل البدء لتجنب الاخطاء 
