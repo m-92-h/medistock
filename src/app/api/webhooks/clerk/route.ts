@@ -1,20 +1,27 @@
-import { Webhook } from "svix";
 import { headers } from "next/headers";
-import { WebhookEvent } from "@clerk/nextjs/server";
-import prisma from "@/lib/prisma";
+import { Webhook } from "svix";
 import { NextResponse } from "next/server";
-import { Role } from "@/app/generated/prisma";
+import prisma from "@/lib/prisma";
+import type { Role } from "../../../generated/prisma/client";
+
+type ClerkUserEvent = {
+  type: string;
+  data: {
+    id: string;
+    email_addresses: { email_address: string }[];
+    first_name?: string;
+    last_name?: string;
+    public_metadata?: { role?: string };
+    unsafe_metadata?: { role?: string };
+  };
+};
 
 export async function POST(req: Request) {
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-  if (!WEBHOOK_SECRET) {
-    return NextResponse.json(
-      { error: "CLERK_WEBHOOK_SECRET not set" },
-      { status: 500 }
-    );
+  const secret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook secret not set" }, { status: 500 });
   }
 
-  // ── التحقق من التوقيع ──────────────────────────
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
@@ -24,47 +31,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing svix headers" }, { status: 400 });
   }
 
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
+  const payload = await req.text();
+  const wh = new Webhook(secret);
 
-  let event: WebhookEvent;
+  let event: ClerkUserEvent;
   try {
-    const wh = new Webhook(WEBHOOK_SECRET);
-    event = wh.verify(body, {
+    event = wh.verify(payload, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    }) as WebhookEvent;
+    }) as ClerkUserEvent;
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // ── معالجة الأحداث ─────────────────────────────
-  try {
-    if (event.type === "user.created" || event.type === "user.updated") {
-      const { id, email_addresses, first_name, last_name, public_metadata } =
-        event.data;
+  const { type, data } = event;
 
-      const email = email_addresses[0]?.email_address;
-      const name = [first_name, last_name].filter(Boolean).join(" ") || null;
-      const role = ((public_metadata?.role as string) ?? "employee") as Role;
+  if (type === "user.created" || type === "user.updated") {
+    const email = data.email_addresses[0]?.email_address;
+    if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
-      await prisma.user.upsert({
-        where: { id },
-        update: { email: email ?? "", name, role },
-        create: { id, email: email ?? "", name, role },
-      });
-    }
+    const rawRole = (data.public_metadata?.role as string | undefined) ?? (data.unsafe_metadata?.role as string | undefined) ?? "employee";
 
-    if (event.type === "user.deleted") {
-      const { id } = event.data;
-      if (id) {
-        await prisma.user.delete({ where: { id } }).catch(() => null);
-      }
-    }
-  } catch (err) {
-    console.error("[Clerk Webhook]", err);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    const validRoles: Role[] = ["admin", "employee", "supplier"];
+    const role: Role = validRoles.includes(rawRole as Role) ? (rawRole as Role) : "employee";
+
+    const name = [data.first_name, data.last_name].filter(Boolean).join(" ") || null;
+
+    await prisma.user.upsert({
+      where: { id: data.id },
+      create: { id: data.id, email, name, role },
+      update: { email, name, role },
+    });
+  }
+
+  if (type === "user.deleted") {
+    await prisma.user.deleteMany({ where: { id: data.id } });
   }
 
   return NextResponse.json({ received: true });
