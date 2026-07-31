@@ -3,20 +3,36 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Option {
   id: string;
   name: string;
 }
 
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const router = useRouter();
   const [fetching, setFetching] = useState(true);
@@ -30,7 +46,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     name: "",
     sku: "",
     description: "",
-    unit: "قطعة",
+    unit: "Unit",
     minQuantity: 10,
     price: "",
     expiryDate: "",
@@ -41,7 +57,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     async function loadData() {
       try {
-        const [prodRes, catRes, supRes] = await Promise.all([fetch(`/api/products/${id}`), fetch("/api/categories"), fetch("/api/suppliers")]);
+        const [prodRes, catRes, supRes] = await Promise.all([
+          fetch(`/api/products/${id}`),
+          fetch("/api/categories"),
+          fetch("/api/suppliers"),
+        ]);
 
         if (catRes.ok) {
           const data = await catRes.json();
@@ -55,19 +75,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         if (prodRes.ok) {
           const { product } = await prodRes.json();
           setForm({
-            name: product.name,
-            sku: product.sku,
+            name: product.name || "",
+            sku: product.sku || "",
             description: product.description || "",
-            unit: product.unit,
-            minQuantity: product.minQuantity,
-            price: product.price,
-            expiryDate: product.expiryDate ? new Date(product.expiryDate).toISOString().split("T")[0] : "",
-            categoryId: product.categoryId,
-            supplierId: product.supplierId,
+            unit: product.unit || "Unit",
+            minQuantity: product.minQuantity ?? 10,
+            price: product.price ? String(product.price) : "",
+            expiryDate: product.expiryDate
+              ? new Date(product.expiryDate).toISOString().split("T")[0]
+              : "",
+            categoryId: product.categoryId || "",
+            supplierId: product.supplierId || "",
           });
+        } else {
+          setError("Failed to load product details. Item may not exist.");
         }
       } catch (err) {
-        setError("فشل تحميل بيانات المنتج");
+        setError("An error occurred while fetching product data.");
       } finally {
         setFetching(false);
       }
@@ -92,61 +116,118 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "حدث خطأ أثناء تعديل بيانات المنتج");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update product details");
+      }
 
       router.push(`/products/${id}`);
       router.refresh();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return <div className="p-8 text-center dir-rtl">جاري جلب تفاصيل المنتج...</div>;
+  if (fetching) {
+    return (
+      <div className="p-12 text-center text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-2 min-h-[400px]">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        <span>Loading product information...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6 dir-rtl text-right">
+    <div className="p-6 max-w-4xl mx-auto space-y-6 text-left">
+      {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" render={<Link href={`/products/${id}`} />}>
-          <ArrowRight className="w-4 h-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          asChild
+          className="h-9 w-9 rounded-xl cursor-pointer transition-colors"
+          aria-label="Back to product details"
+        >
+          <Link href={`/products/${id}`}>
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">تعديل المنتج</h1>
-          <p className="text-sm text-muted-foreground">تحديث بيانات ووصف المادة الطبية</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Edit Product
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Update specifications, stock thresholds, and details for this medical item
+          </p>
         </div>
       </div>
 
-      {error && <div className="p-4 bg-destructive/15 text-destructive rounded-md text-sm">{error}</div>}
+      {/* Error Alert */}
+      {error && (
+        <div className="p-4 bg-destructive/15 text-destructive border border-destructive/20 rounded-lg text-xs sm:text-sm flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
+      {/* Main Form */}
       <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">تفاصيل المنتج</CardTitle>
+        <Card className="border border-border/60 shadow-sm">
+          <CardHeader className="border-b border-border/40 pb-4">
+            <CardTitle className="text-base font-semibold">
+              Product Specification
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Modify core properties and inventory alerting configuration
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 pt-5">
+            {/* Name & SKU */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">اسم المنتج</Label>
-                <Input id="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs font-medium">
+                  Product Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  required
+                  placeholder="e.g., Amoxicillin 500mg Capsule"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="text-xs"
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sku">رمز المنتج (SKU)</Label>
-                <Input id="sku" required value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label htmlFor="sku" className="text-xs font-medium">
+                  SKU / Code <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="sku"
+                  required
+                  placeholder="e.g., MED-AMX-500"
+                  value={form.sku}
+                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                  className="text-xs font-mono"
+                />
               </div>
             </div>
 
+            {/* Category & Supplier */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>الفئة</Label>
-                <Select value={form.categoryId} onValueChange={(val) => setForm({ ...form, categoryId: val ?? "" })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Category</Label>
+                <Select
+                  value={form.categoryId}
+                  onValueChange={(val) => setForm({ ...form, categoryId: val ?? "" })}
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={c.id} className="text-xs">
                         {c.name}
                       </SelectItem>
                     ))}
@@ -154,15 +235,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>المورد الرئيسي</Label>
-                <Select value={form.supplierId} onValueChange={(val) => setForm({ ...form, supplierId: val ?? "" })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر المورد" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Primary Supplier</Label>
+                <Select
+                  value={form.supplierId}
+                  onValueChange={(val) => setForm({ ...form, supplierId: val ?? "" })}
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue placeholder="Select Supplier" />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
+                      <SelectItem key={s.id} value={s.id} className="text-xs">
                         {s.name}
                       </SelectItem>
                     ))}
@@ -171,40 +255,105 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
+            {/* Unit, Price & Expiry */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="unit">وحدة القياس</Label>
-                <Input id="unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label htmlFor="unit" className="text-xs font-medium">
+                  Unit of Measure
+                </Label>
+                <Input
+                  id="unit"
+                  placeholder="e.g., Box, Pack, Bottle"
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                  className="text-xs"
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">السعر الإفرادي ($)</Label>
-                <Input id="price" type="number" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label htmlFor="price" className="text-xs font-medium">
+                  Unit Price ($) <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  className="text-xs font-mono"
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="expiryDate">تاريخ انتهاء الصلاحية</Label>
-                <Input id="expiryDate" type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label htmlFor="expiryDate" className="text-xs font-medium">
+                  Expiration Date
+                </Label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                  className="text-xs font-mono"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="minQuantity">حد التنبيه (أدنى كمية)</Label>
-              <Input id="minQuantity" type="number" min="0" value={form.minQuantity} onChange={(e) => setForm({ ...form, minQuantity: Number(e.target.value) })} />
+            {/* Minimum Alert Threshold */}
+            <div className="space-y-1.5">
+              <Label htmlFor="minQuantity" className="text-xs font-medium">
+                Low Stock Alert Threshold
+              </Label>
+              <Input
+                id="minQuantity"
+                type="number"
+                min="0"
+                value={form.minQuantity}
+                onChange={(e) => setForm({ ...form, minQuantity: Number(e.target.value) })}
+                className="text-xs font-mono max-w-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Triggers a warning when current inventory drops to or below this level.
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">الوصف والتعليمات</Label>
-              <Textarea id="description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            {/* Description */}
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-xs font-medium">
+                Description & Instructions
+              </Label>
+              <Textarea
+                id="description"
+                rows={3}
+                placeholder="Enter additional details or handling instructions..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="text-xs resize-y"
+              />
             </div>
 
-            <div className="pt-4 flex justify-end gap-3">
-              <Button type="button" variant="outline" render={<Link href={`/products/${id}`} />}>
-                إلغاء
+            {/* Form Actions */}
+            <div className="pt-4 flex justify-end items-center gap-3 border-t border-border/40">
+              <Button
+                type="button"
+                variant="outline"
+                asChild
+                className="text-xs cursor-pointer"
+              >
+                <Link href={`/products/${id}`}>Cancel</Link>
               </Button>
-              <Button type="submit" disabled={loading} className="gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                حفظ التغييرات
+              <Button
+                type="submit"
+                disabled={loading}
+                className="gap-2 text-xs cursor-pointer"
+              >
+                {loading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                Save Changes
               </Button>
             </div>
           </CardContent>
