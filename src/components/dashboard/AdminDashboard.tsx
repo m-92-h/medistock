@@ -148,19 +148,19 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
   const variants = {
     increase: {
       badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-      iconBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white",
+      iconBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white!",
       glow: "from-emerald-500/10 to-transparent",
       accentBar: "bg-emerald-500",
     },
     decrease: {
       badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white",
+      iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white!",
       glow: "from-amber-500/10 to-transparent",
       accentBar: "bg-amber-500",
     },
     danger: {
       badge: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
-      iconBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white",
+      iconBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white!",
       glow: "from-rose-500/10 to-transparent",
       accentBar: "bg-rose-500",
     },
@@ -345,7 +345,7 @@ export function AdminDashboard({ kpis, chartData, ordersByStatus, recentMovement
           icon={ShoppingCart}
           href="/orders"
           sparklineData={stockSparkline.map((v, i) => outSparkline[i] ?? v)}
-          sparklineColor="var(--color-chart-2)"
+          sparklineColor="var(--color-chart-3)"
         />
 
         <KpiCard
@@ -356,7 +356,7 @@ export function AdminDashboard({ kpis, chartData, ordersByStatus, recentMovement
           icon={Bell}
           href="/alerts"
           sparklineData={stockSparkline}
-          sparklineColor="var(--color-chart-3)"
+          sparklineColor="var(--color-chart-2)"
         />
       </div>
 
