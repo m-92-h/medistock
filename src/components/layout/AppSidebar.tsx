@@ -199,7 +199,7 @@ export function AppSidebar() {
                         isActive={isActive}
                         tooltip={item.label}
                         className={cn(
-                          "h-9 rounded-lg transition-all",
+                          "h-8 my-0.5 rounded-lg transition-all",
                           isActive ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                         )}
                       >
