@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { Bell, Loader2, Sun, Moon } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -46,6 +46,7 @@ interface Notification {
 }
 
 export function AppNavbar() {
+  const router = useRouter();
   const breadcrumbs = useBreadcrumbs();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -56,7 +57,7 @@ export function AppNavbar() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
+  const fetchAlerts = () => {
     fetch("/api/alerts?limit=10")
       .then((res) => res.json())
       .then((data) => {
@@ -81,7 +82,57 @@ export function AppNavbar() {
         // Fallback to empty if API not ready
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchAlerts();
   }, []);
+
+  // 1. التوجيه وتحديد التنبيه كـ "مقروء" عند الضغط عليه
+  const handleNotificationClick = async (notification: Notification) => {
+    if (notification.unread) {
+      try {
+        await fetch(`/api/alerts/${notification.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isRead: true }),
+        });
+        
+        // تحديث الحالة محلياً
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, unread: false } : n))
+        );
+      } catch (error) {
+        console.error("Failed to mark alert as read:", error);
+      }
+    }
+
+    // الانتقال إلى صفحة التنبيهات
+    router.push("/alerts");
+  };
+
+  // 2. تحديث جميع التنبيهات كـ "مقروءة"
+  const handleMarkAllAsRead = async () => {
+    try {
+      const unreadAlerts = notifications.filter((n) => n.unread);
+      
+      // إرسال طلبات تحديث التنبيهات غير المقروءة
+      await Promise.all(
+        unreadAlerts.map((n) =>
+          fetch(`/api/alerts/${n.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isRead: true }),
+          })
+        )
+      );
+
+      // تحديث الواجهة محلياً
+      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    } catch (error) {
+      console.error("Failed to mark all alerts as read:", error);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
@@ -152,7 +203,14 @@ export function AppNavbar() {
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications</div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} className={cn("flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer", n.unread && "bg-primary/5")}>
+                  <div
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={cn(
+                      "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer",
+                      n.unread && "bg-primary/5"
+                    )}
+                  >
                     {n.unread ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" /> : <span className="mt-1.5 h-2 w-2 shrink-0" />}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground leading-snug">{n.title}</p>
@@ -163,9 +221,14 @@ export function AppNavbar() {
                 ))
               )}
             </div>
-            {notifications.length > 0 && (
+            {notifications.length > 0 && unreadCount > 0 && (
               <div className="border-t border-border p-2">
-                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  className="w-full text-xs text-muted-foreground"
+                >
                   Mark all as read
                 </Button>
               </div>

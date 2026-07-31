@@ -5,20 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, UserPlus, type LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -198,10 +185,7 @@ export function AppSidebar() {
                       <SidebarMenuButton
                         isActive={isActive}
                         tooltip={item.label}
-                        className={cn(
-                          "h-8 my-0.5 rounded-lg transition-all",
-                          isActive ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                        )}
+                        className={cn("h-8 my-0.5 rounded-lg transition-all", isActive ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground")}
                       >
                         <Link href={item.href} className="flex items-center gap-2 w-full">
                           <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
