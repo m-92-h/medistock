@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, UserPlus, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, type LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -107,12 +107,6 @@ const navGroups: {
         icon: Users,
         roles: ["admin"],
       },
-      {
-        label: "Invites",
-        href: "/invites",
-        icon: UserPlus,
-        roles: ["admin"],
-      },
     ],
   },
 ];
@@ -189,7 +183,7 @@ export function AppSidebar() {
                       >
                         <Link href={item.href} className="flex items-center gap-2 w-full">
                           <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-                          <span>{item.label}</span>
+                          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                         </Link>
                       </SidebarMenuButton>
                       {item.badge && <SidebarMenuBadge className="bg-destructive/10 text-destructive text-xs font-medium">{item.badge}</SidebarMenuBadge>}
