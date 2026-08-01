@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   const { type, data } = event;
 
-  if (type === "user.created" || type === "user.updated") {
+  if (type === "user.created" || type === "user.updated") {    
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
