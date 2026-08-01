@@ -7,12 +7,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─────────────────────────────────────────
-// المستخدمون (مزامنة مع Clerk عبر Webhook)
-// ─────────────────────────────────────────
-
 model User {
-  id        String   @id // Clerk userId
+  id        String   @id 
   email     String   @unique
   name      String?
   role      Role
@@ -32,20 +28,12 @@ enum Role {
   supplier
 }
 
-// ─────────────────────────────────────────
-// الفئات (Admin فقط)
-// ─────────────────────────────────────────
-
 model Category {
   id        String    @id @default(cuid())
   name      String    @unique
   createdAt DateTime  @default(now())
   products  Product[]
 }
-
-// ─────────────────────────────────────────
-// الموردون (Admin فقط للإدارة)
-// ─────────────────────────────────────────
 
 model Supplier {
   id        String   @id @default(cuid())
@@ -54,7 +42,6 @@ model Supplier {
   phone     String?
   createdAt DateTime @default(now())
 
-  // ربط بحساب Clerk — مورد مدعو عبر Invitation
   userId String? @unique
   user   User?   @relation("SupplierUser", fields: [userId], references: [id])
 
@@ -62,18 +49,14 @@ model Supplier {
   orders   Order[]
 }
 
-// ─────────────────────────────────────────
-// المنتجات (Admin + Employee)
-// ─────────────────────────────────────────
-
 model Product {
   id          String    @id @default(cuid())
   name        String
   sku         String    @unique
   description String?
-  unit        String    @default("قطعة") // قطعة، علبة، زجاجة...
+  unit        String    @default("Piece") 
   quantity    Int       @default(0)
-  minQuantity Int       @default(10) // حد التنبيه
+  minQuantity Int       @default(10)
   price       Decimal   @db.Decimal(10, 2)
   expiryDate  DateTime?
   createdAt   DateTime  @default(now())
@@ -90,10 +73,6 @@ model Product {
   alerts         Alert[]
 }
 
-// ─────────────────────────────────────────
-// حركات المخزون (Admin + Employee)
-// ─────────────────────────────────────────
-
 model StockMovement {
   id        String       @id @default(cuid())
   type      MovementType
@@ -109,13 +88,9 @@ model StockMovement {
 }
 
 enum MovementType {
-  IN  // وارد
-  OUT // صادر
+  IN
+  OUT 
 }
-
-// ─────────────────────────────────────────
-// طلبات الشراء (Admin + Employee + Supplier)
-// ─────────────────────────────────────────
 
 model Order {
   id        String      @id @default(cuid())
@@ -124,15 +99,12 @@ model Order {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  // من أنشأ الطلب (موظف أو أدمن)
   createdById String
   createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
 
-  // المورد المستهدف — يرى الطلب ويحدث حالته
   supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
 
-  // تواريخ الشحن والاستلام (يحدثها المورد والموظف)
   shippedAt   DateTime?
   deliveredAt DateTime?
 
@@ -140,17 +112,17 @@ model Order {
 }
 
 enum OrderStatus {
-  PENDING   // بانتظار موافقة الأدمن
-  APPROVED  // موافق عليه
-  REJECTED  // مرفوض
-  SHIPPED   // تم الشحن — يحدثه المورد
-  DELIVERED // تم الاستلام — يحدثه الموظف
+  PENDING   
+  APPROVED  
+  REJECTED  
+  SHIPPED   
+  DELIVERED 
 }
 
 model OrderItem {
   id        String  @id @default(cuid())
   quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2) // snapshot للسعر وقت الطلب
+  unitPrice Decimal @db.Decimal(10, 2) 
 
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -159,12 +131,6 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
 }
 
-// ─────────────────────────────────────────
-// التنبيهات
-// userId = null  → تنبيه عام يراه الأدمن
-// userId = موجود → تنبيه موجه للموظف المحدد
-// ─────────────────────────────────────────
-
 model Alert {
   id        String    @id @default(cuid())
   type      AlertType
@@ -172,17 +138,15 @@ model Alert {
   isRead    Boolean   @default(false)
   createdAt DateTime  @default(now())
 
-  // المنتج المرتبط بالتنبيه (اختياري)
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
 
-  // المستلم (null = أدمن، موجود = موظف محدد)
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
 }
 
 enum AlertType {
-  LOW_STOCK // مخزون منخفض
-  EXPIRY    // قرب انتهاء الصلاحية
-  ORDER     // طلب جديد أو تحديث
+  LOW_STOCK 
+  EXPIRY   
+  ORDER 
 }
