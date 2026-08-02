@@ -93,8 +93,9 @@ export default function SuppliersPage() {
       setFormData({ name: "", email: "", phone: "" });
       setIsCreateOpen(false);
       fetchSuppliers();
-    } catch (err: any) {
-      setCreateError(err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setCreateError(errorMessage);
     } finally {
       setCreateLoading(false);
     }
@@ -135,8 +136,9 @@ export default function SuppliersPage() {
 
       setEditingSupplier(null);
       fetchSuppliers();
-    } catch (err: any) {
-      setEditError(err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setEditError(errorMessage);
     } finally {
       setEditLoading(false);
     }
@@ -159,17 +161,16 @@ export default function SuppliersPage() {
 
       setSupplierToDelete(null);
       fetchSuppliers();
-    } catch (err: any) {
-      setDeleteError(err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setDeleteError(errorMessage);
     } finally {
       setDeleteLoading(false);
     }
   };
 
   // Filter suppliers client-side
-  const filteredSuppliers = suppliers.filter(
-    (sup) => sup.name.toLowerCase().includes(search.toLowerCase()) || sup.email.toLowerCase().includes(search.toLowerCase()) || (sup.phone && sup.phone.includes(search)),
-  );
+  const filteredSuppliers = suppliers.filter((sup) => sup.name.toLowerCase().includes(search.toLowerCase()) || sup.email.toLowerCase().includes(search.toLowerCase()) || (sup.phone && sup.phone.includes(search)));
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -253,8 +254,8 @@ export default function SuppliersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Supplier</TableHead>
-                <TableHead>Contact Info</TableHead>
-                <TableHead>Linked User Account</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead>Orders</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -289,20 +290,14 @@ export default function SuppliersPage() {
                           <Mail className="w-3.5 h-3.5" />
                           <span>{sup.email}</span>
                         </div>
-                        {sup.phone && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>{sup.phone}</span>
-                          </div>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {sup.user ? (
-                        <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20">
-                          <UserCheck className="w-3 h-3" />
-                          {sup.user.name}
-                        </Badge>
+                      {sup.phone ? (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>{sup.phone}</span>
+                        </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
