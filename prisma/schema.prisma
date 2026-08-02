@@ -7,6 +7,31 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  admin
+  employee
+  supplier
+}
+
+enum MovementType {
+  IN
+  OUT 
+}
+
+enum OrderStatus {
+  PENDING   
+  APPROVED  
+  REJECTED  
+  SHIPPED   
+  DELIVERED 
+}
+
+enum AlertType {
+  LOW_STOCK 
+  EXPIRY   
+  ORDER 
+}
+
 model User {
   id        String   @id 
   email     String   @unique
@@ -20,12 +45,6 @@ model User {
   createdOrders  Order[]         @relation("CreatedBy")
   supplier       Supplier?       @relation("SupplierUser")
   alerts         Alert[]
-}
-
-enum Role {
-  admin
-  employee
-  supplier
 }
 
 model Category {
@@ -87,11 +106,6 @@ model StockMovement {
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 }
 
-enum MovementType {
-  IN
-  OUT 
-}
-
 model Order {
   id        String      @id @default(cuid())
   status    OrderStatus @default(PENDING)
@@ -109,14 +123,6 @@ model Order {
   deliveredAt DateTime?
 
   items OrderItem[]
-}
-
-enum OrderStatus {
-  PENDING   
-  APPROVED  
-  REJECTED  
-  SHIPPED   
-  DELIVERED 
 }
 
 model OrderItem {
@@ -143,10 +149,4 @@ model Alert {
 
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
-}
-
-enum AlertType {
-  LOW_STOCK 
-  EXPIRY   
-  ORDER 
 }
