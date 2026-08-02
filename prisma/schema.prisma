@@ -29,7 +29,8 @@ enum OrderStatus {
 enum AlertType {
   LOW_STOCK 
   EXPIRY   
-  ORDER 
+  ORDER
+  GENERAL
 }
 
 model User {

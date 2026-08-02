@@ -3,55 +3,46 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button }   from "@/components/ui/button";
+import { Input }    from "@/components/ui/input";
+import { Label }    from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface Option {
-  id: string;
-  name: string;
-}
+interface Option { id: string; name: string; }
 
-export default function EditProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const router = useRouter();
-  const [fetching, setFetching] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id }   = use(params);
+  const router   = useRouter();
 
+  const { user: clerkUser, isLoaded } = useUser();
+  const userRole = clerkUser?.publicMetadata?.role as string | undefined;
+
+  useEffect(() => {
+    if (isLoaded && userRole === "supplier") {
+      router.replace("/dashboard");
+    }
+  }, [isLoaded, userRole, router]);
+
+  const [fetching,   setFetching]   = useState(true);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
   const [categories, setCategories] = useState<Option[]>([]);
-  const [suppliers, setSuppliers] = useState<Option[]>([]);
+  const [suppliers,  setSuppliers]  = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    name: "",
-    sku: "",
+    name:        "",
+    sku:         "",
     description: "",
-    unit: "Unit",
+    unit:        "Unit",
     minQuantity: 10,
-    price: "",
-    expiryDate: "",
-    categoryId: "",
-    supplierId: "",
+    price:       "",
+    expiryDate:  "",
+    categoryId:  "",
+    supplierId:  "",
   });
 
   useEffect(() => {
@@ -75,22 +66,23 @@ export default function EditProductPage({
         if (prodRes.ok) {
           const { product } = await prodRes.json();
           setForm({
-            name: product.name || "",
-            sku: product.sku || "",
+            name:        product.name        || "",
+            sku:         product.sku         || "",
             description: product.description || "",
-            unit: product.unit || "Unit",
+            unit:        product.unit        || "Unit",
             minQuantity: product.minQuantity ?? 10,
-            price: product.price ? String(product.price) : "",
-            expiryDate: product.expiryDate
+            price:       product.price != null ? String(product.price) : "",
+            expiryDate:  product.expiryDate
               ? new Date(product.expiryDate).toISOString().split("T")[0]
               : "",
-            categoryId: product.categoryId || "",
-            supplierId: product.supplierId || "",
+            categoryId:  product.categoryId || "",
+            supplierId:  product.supplierId || "",
           });
         } else {
-          setError("Failed to load product details. Item may not exist.");
+          const data = await prodRes.json().catch(() => ({}));
+          setError(data.error || "Failed to load product details. Item may not exist.");
         }
-      } catch (err) {
+      } catch {
         setError("An error occurred while fetching product data.");
       } finally {
         setFetching(false);
@@ -101,33 +93,55 @@ export default function EditProductPage({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
+    // FIX: client-side validation للـ price في Edit (يوافق validation الـ PATCH route)
+    const parsedPrice = Number(form.price);
+    if (!form.price || isNaN(parsedPrice) || parsedPrice < 0) {
+      setError("Please enter a valid price (must be 0 or greater).");
+      return;
+    }
+
+    // FIX: client-side validation للـ minQuantity
+    const parsedMin = Number(form.minQuantity);
+    if (isNaN(parsedMin) || parsedMin < 0) {
+      setError("Low stock threshold must be 0 or greater.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch(`/api/products/${id}`, {
-        method: "PATCH",
+        method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          minQuantity: Number(form.minQuantity),
-          price: Number(form.price),
+          minQuantity: parsedMin,
+          price:       parsedPrice,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update product details");
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to update product details");
 
       router.push(`/products/${id}`);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   };
+
+  // ─── Loading States ────────────────────────────────────────────────────────
+  if (!isLoaded || (isLoaded && userRole === "supplier")) {
+    return (
+      <div className="p-12 text-center text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-2 min-h-[400px]">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        <span>Redirecting...</span>
+      </div>
+    );
+  }
 
   if (fetching) {
     return (
@@ -140,30 +154,26 @@ export default function EditProductPage({
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6 text-left">
-      {/* Header */}
+
+      {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">
         <Button
-          variant="outline"
-          size="icon"
-          asChild
+          variant="outline" size="icon"
+          render={<Link href={`/products/${id}`} />}
           className="h-9 w-9 rounded-xl cursor-pointer transition-colors"
           aria-label="Back to product details"
         >
-          <Link href={`/products/${id}`}>
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
+          <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Edit Product
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Product</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Update specifications, stock thresholds, and details for this medical item
           </p>
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* ─── Error Alert ─────────────────────────────────────────────────────── */}
       {error && (
         <div className="p-4 bg-destructive/15 text-destructive border border-destructive/20 rounded-lg text-xs sm:text-sm flex items-center gap-2.5">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -171,18 +181,17 @@ export default function EditProductPage({
         </div>
       )}
 
-      {/* Main Form */}
+      {/* ─── Form ────────────────────────────────────────────────────────────── */}
       <form onSubmit={handleSubmit}>
         <Card className="border border-border/60 shadow-sm">
           <CardHeader className="border-b border-border/40 pb-4">
-            <CardTitle className="text-base font-semibold">
-              Product Specification
-            </CardTitle>
+            <CardTitle className="text-base font-semibold">Product Specification</CardTitle>
             <CardDescription className="text-xs">
               Modify core properties and inventory alerting configuration
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 pt-5">
+
             {/* Name & SKU */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -190,9 +199,7 @@ export default function EditProductPage({
                   Product Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="name"
-                  required
-                  placeholder="e.g., Amoxicillin 500mg Capsule"
+                  id="name" required placeholder="e.g., Amoxicillin 500mg Capsule"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="text-xs"
@@ -204,11 +211,9 @@ export default function EditProductPage({
                   SKU / Code <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="sku"
-                  required
-                  placeholder="e.g., MED-AMX-500"
+                  id="sku" required placeholder="e.g., MED-AMX-500"
                   value={form.sku}
-                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                  onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })}
                   className="text-xs font-mono"
                 />
               </div>
@@ -227,9 +232,7 @@ export default function EditProductPage({
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs">
-                        {c.name}
-                      </SelectItem>
+                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -246,9 +249,7 @@ export default function EditProductPage({
                   </SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id} className="text-xs">
-                        {s.name}
-                      </SelectItem>
+                      <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -258,12 +259,9 @@ export default function EditProductPage({
             {/* Unit, Price & Expiry */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="unit" className="text-xs font-medium">
-                  Unit of Measure
-                </Label>
+                <Label htmlFor="unit" className="text-xs font-medium">Unit of Measure</Label>
                 <Input
-                  id="unit"
-                  placeholder="e.g., Box, Pack, Bottle"
+                  id="unit" placeholder="e.g., Box, Pack, Bottle"
                   value={form.unit}
                   onChange={(e) => setForm({ ...form, unit: e.target.value })}
                   className="text-xs"
@@ -275,10 +273,7 @@ export default function EditProductPage({
                   Unit Price ($) <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  required
+                  id="price" type="number" step="0.01" min="0" required
                   placeholder="0.00"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
@@ -287,12 +282,9 @@ export default function EditProductPage({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="expiryDate" className="text-xs font-medium">
-                  Expiration Date
-                </Label>
+                <Label htmlFor="expiryDate" className="text-xs font-medium">Expiration Date</Label>
                 <Input
-                  id="expiryDate"
-                  type="date"
+                  id="expiryDate" type="date"
                   value={form.expiryDate}
                   onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
                   className="text-xs font-mono"
@@ -300,15 +292,11 @@ export default function EditProductPage({
               </div>
             </div>
 
-            {/* Minimum Alert Threshold */}
+            {/* Min Quantity */}
             <div className="space-y-1.5">
-              <Label htmlFor="minQuantity" className="text-xs font-medium">
-                Low Stock Alert Threshold
-              </Label>
+              <Label htmlFor="minQuantity" className="text-xs font-medium">Low Stock Alert Threshold</Label>
               <Input
-                id="minQuantity"
-                type="number"
-                min="0"
+                id="minQuantity" type="number" min="0"
                 value={form.minQuantity}
                 onChange={(e) => setForm({ ...form, minQuantity: Number(e.target.value) })}
                 className="text-xs font-mono max-w-xs"
@@ -320,12 +308,9 @@ export default function EditProductPage({
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-xs font-medium">
-                Description & Instructions
-              </Label>
+              <Label htmlFor="description" className="text-xs font-medium">Description &amp; Instructions</Label>
               <Textarea
-                id="description"
-                rows={3}
+                id="description" rows={3}
                 placeholder="Enter additional details or handling instructions..."
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -333,26 +318,20 @@ export default function EditProductPage({
               />
             </div>
 
-            {/* Form Actions */}
+            {/* Actions */}
             <div className="pt-4 flex justify-end items-center gap-3 border-t border-border/40">
               <Button
-                type="button"
-                variant="outline"
-                asChild
+                type="button" variant="outline"
+                render={<Link href={`/products/${id}`} />}
                 className="text-xs cursor-pointer"
               >
-                <Link href={`/products/${id}`}>Cancel</Link>
+                Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="gap-2 text-xs cursor-pointer"
-              >
-                {loading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Save className="w-3.5 h-3.5" />
-                )}
+              <Button type="submit" disabled={loading} className="gap-2 text-xs cursor-pointer">
+                {loading
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Save className="w-3.5 h-3.5" />
+                }
                 Save Changes
               </Button>
             </div>

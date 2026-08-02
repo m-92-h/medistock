@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 interface AlertItem {
   id: string;
-  type: "LOW_STOCK" | "EXPIRATION" | "ORDER" | "SYSTEM" | string;
+  type: "LOW_STOCK" | "EXPIRY" | "ORDER" | "GENERAL" | string;
   message: string;
   isRead: boolean;
   createdAt: string;
@@ -38,7 +38,7 @@ export default function AlertsPage() {
 
   // Create Modal (Admin)
   const [createOpen, setCreateOpen] = useState(false);
-  const [newType, setNewType] = useState<string>("SYSTEM");
+  const [newType, setNewType] = useState<string>("GENERAL");
   const [newMessage, setNewMessage] = useState("");
   const [newProductId, setNewProductId] = useState("");
   const [newUserId, setNewUserId] = useState("");
@@ -217,9 +217,9 @@ export default function AlertsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SYSTEM">SYSTEM</SelectItem>
+                        <SelectItem value="GENERAL">GENERAL</SelectItem>
                         <SelectItem value="LOW_STOCK">LOW_STOCK</SelectItem>
-                        <SelectItem value="EXPIRATION">EXPIRATION</SelectItem>
+                        <SelectItem value="EXPIRY">EXPIRY</SelectItem>
                         <SelectItem value="ORDER">ORDER</SelectItem>
                       </SelectContent>
                     </Select>
@@ -283,9 +283,9 @@ export default function AlertsPage() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="LOW_STOCK">Low Stock</SelectItem>
-                <SelectItem value="EXPIRATION">Expiration</SelectItem>
+                <SelectItem value="EXPIRY">Expiry</SelectItem>
                 <SelectItem value="ORDER">Orders</SelectItem>
-                <SelectItem value="SYSTEM">System</SelectItem>
+                <SelectItem value="GENERAL">General</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -351,13 +351,7 @@ export default function AlertsPage() {
                     </Button>
                   )}
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDeleteAlert(alert.id)}
-                    disabled={actionId === alert.id}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteAlert(alert.id)} disabled={actionId === alert.id}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

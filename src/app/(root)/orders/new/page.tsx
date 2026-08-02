@@ -48,11 +48,11 @@ export default function NewOrderPage() {
   useEffect(() => {
     async function initData() {
       try {
-        const [supRes, prodRes] = await Promise.all([fetch("/api/suppliers?limit=100"), fetch("/api/products?limit=100")]);
+        const [supRes, prodRes] = await Promise.all([fetch("/api/suppliers?minimal"), fetch("/api/products?limit=100")]);
 
         if (supRes.ok) {
           const supData = await supRes.json();
-          setSuppliers(supData.suppliers || []);
+          setSuppliers(supData || []);
         }
 
         if (prodRes.ok) {

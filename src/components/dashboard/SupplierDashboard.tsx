@@ -11,7 +11,6 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
-  TrendingUp,
   Building2,
 } from "lucide-react";
 import {
@@ -24,19 +23,31 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+interface OrderItem {
+  quantity: number;
+  unitPrice: number; // تم تحويله من Decimal في page.tsx
+  product: { name: string } | null;
+}
+
 interface Order {
   id: string;
   status: string;
   createdAt: Date;
   note: string | null;
   createdBy: { name: string | null } | null;
-  items: { quantity: number; unitPrice: any; product: { name: string } | null }[];
+  items: OrderItem[];
 }
 
 interface Props {
@@ -44,6 +55,7 @@ interface Props {
   supplier: { id: string; name: string } | null;
   recentOrders: Order[];
   ordersByStatus: Record<string, number>;
+  totalGross: number; // القيمة الإجمالية الحقيقية لجميع الطلبات من DB
 }
 
 // ─── Config & Helpers ────────────────────────────────────────────────────────
@@ -63,7 +75,8 @@ const STATUS_CONFIG: Record<
     icon: Clock,
     iconClass: "text-amber-600 dark:text-amber-400",
     iconBg: "bg-amber-500/10",
-    badgeClass: "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5",
+    badgeClass:
+      "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5",
     barColor: "var(--color-chart-1)",
   },
   APPROVED: {
@@ -71,7 +84,8 @@ const STATUS_CONFIG: Record<
     icon: Package,
     iconClass: "text-blue-600 dark:text-blue-400",
     iconBg: "bg-blue-500/10",
-    badgeClass: "text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/5",
+    badgeClass:
+      "text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/5",
     barColor: "var(--color-chart-2)",
   },
   REJECTED: {
@@ -87,7 +101,8 @@ const STATUS_CONFIG: Record<
     icon: Truck,
     iconClass: "text-purple-600 dark:text-purple-400",
     iconBg: "bg-purple-500/10",
-    badgeClass: "text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/5",
+    badgeClass:
+      "text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/5",
     barColor: "var(--color-chart-4)",
   },
   DELIVERED: {
@@ -95,7 +110,8 @@ const STATUS_CONFIG: Record<
     icon: CheckCircle2,
     iconClass: "text-emerald-600 dark:text-emerald-400",
     iconBg: "bg-emerald-500/10",
-    badgeClass: "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
+    badgeClass:
+      "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
     barColor: "var(--color-chart-3)",
   },
 };
@@ -108,11 +124,11 @@ function formatDate(d: Date | string) {
   });
 }
 
-function orderTotal(items: Order["items"]) {
-  return items.reduce((s, i) => s + i.quantity * Number(i.unitPrice), 0);
+function orderTotal(items: OrderItem[]) {
+  return items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 }
 
-// ─── Professional Stat Card ──────────────────────────────────────────────────
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiStatCard({
   title,
   value,
@@ -129,9 +145,12 @@ function KpiStatCard({
   badgeVariant?: "warning" | "success" | "neutral" | "purple";
 }) {
   const badgeStyles = {
-    warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    purple: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    warning:
+      "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    success:
+      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    purple:
+      "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
     neutral: "bg-secondary text-secondary-foreground border-border",
   };
 
@@ -152,7 +171,13 @@ function KpiStatCard({
             {value}
           </span>
           {badgeText && (
-            <Badge variant="outline" className={cn("text-[11px] font-medium px-2 py-0.5", badgeStyles[badgeVariant])}>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[11px] font-medium px-2 py-0.5",
+                badgeStyles[badgeVariant]
+              )}
+            >
               {badgeText}
             </Badge>
           )}
@@ -173,7 +198,9 @@ function BarTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border bg-popover/95 backdrop-blur-md px-3 py-2 shadow-lg text-xs space-y-1 min-w-[120px]">
-      <p className="font-semibold text-foreground border-b border-border/50 pb-1">{label}</p>
+      <p className="font-semibold text-foreground border-b border-border/50 pb-1">
+        {label}
+      </p>
       <div className="flex items-center justify-between gap-3 pt-0.5">
         <span className="text-muted-foreground">Volume:</span>
         <span className="font-bold tabular-nums text-foreground">
@@ -185,13 +212,16 @@ function BarTooltip({ active, payload, label }: any) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus }: Props) {
+export function SupplierDashboard({
+  user,
+  supplier,
+  recentOrders,
+  ordersByStatus,
+  totalGross,
+}: Props) {
   const totalOrders = Object.values(ordersByStatus).reduce((s, v) => s + v, 0);
   const pendingCount = ordersByStatus["PENDING"] ?? 0;
   const shippedCount = ordersByStatus["SHIPPED"] ?? 0;
-
-  // Calculate Total Gross Value across recent orders
-  const grossValue = recentOrders.reduce((sum, order) => sum + orderTotal(order.items), 0);
 
   const barData = Object.entries(STATUS_CONFIG)
     .map(([key, cfg]) => ({
@@ -225,12 +255,14 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-amber-600 dark:text-amber-400">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div className="text-xs sm:text-sm">
-            <span className="font-semibold">Account Disconnected:</span> Your user profile isn't associated with an active supplier profile. Please contact system administrators.
+            <span className="font-semibold">Account Disconnected:</span> Your
+            user profile isn't associated with an active supplier profile. Please
+            contact system administrators.
           </div>
         </div>
       )}
 
-      {/* KPI Cards Grid (4 Clean Cards) */}
+      {/* KPI Cards — جميعها من DB */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiStatCard
           title="Total Orders"
@@ -259,22 +291,28 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
           badgeVariant="purple"
         />
 
+        {/* totalGross يأتي من DB — قيمة جميع الطلبات التاريخية */}
         <KpiStatCard
-          title="Recent Gross Value"
-          value={`$${grossValue.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
-          subText="Total value of active batch"
+          title="Total Gross Value"
+          value={`$${totalGross.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
+          subText="Lifetime order value"
           icon={DollarSign}
-          badgeText="Revenue"
+          badgeText="All-time"
           badgeVariant="success"
         />
       </div>
 
-      {/* Charts & Activity Logs Section */}
+      {/* Charts & Activity Logs */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Status Distribution Bar Chart */}
         <Card className="flex flex-col justify-between">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Orders Status Volume</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Orders Status Volume
+            </CardTitle>
             <CardDescription className="text-xs">
               Distribution of orders across all operational stages
             </CardDescription>
@@ -311,7 +349,10 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
                     tickLine={false}
                     allowDecimals={false}
                   />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--color-accent)", opacity: 0.4 }} />
+                  <Tooltip
+                    content={<BarTooltip />}
+                    cursor={{ fill: "var(--color-accent)", opacity: 0.4 }}
+                  />
                   <Bar dataKey="value" name="Orders" radius={[6, 6, 0, 0]}>
                     {barData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
@@ -327,16 +368,22 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Recent Orders</CardTitle>
-              <CardDescription className="text-xs">Latest assigned procurement requests</CardDescription>
+              <CardTitle className="text-base font-semibold">
+                Recent Orders
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Latest assigned procurement requests
+              </CardDescription>
             </div>
             <Button
               variant="ghost"
               size="sm"
               className="h-8 gap-1 text-xs cursor-pointer hover:bg-accent"
-              render={<Link href="/orders" />}
+              asChild
             >
-              View all <ArrowRight className="h-3.5 w-3.5" />
+              <Link href="/orders">
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           </CardHeader>
           <CardContent className="pb-4">
@@ -350,8 +397,9 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
             ) : (
               <div className="space-y-2">
                 {recentOrders.map((o) => {
-                  const cfg = STATUS_CONFIG[o.status] || STATUS_CONFIG.PENDING;
+                  const cfg = STATUS_CONFIG[o.status] ?? STATUS_CONFIG.PENDING;
                   const Icon = cfg.icon;
+                  const total = orderTotal(o.items);
 
                   return (
                     <Link
@@ -373,7 +421,8 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
                             Order #{o.id.slice(-8).toUpperCase()}
                           </p>
                           <p className="text-[11px] text-muted-foreground truncate">
-                            {formatDate(o.createdAt)} • {o.items.length} {o.items.length === 1 ? "item" : "items"}
+                            {formatDate(o.createdAt)} • {o.items.length}{" "}
+                            {o.items.length === 1 ? "item" : "items"}
                           </p>
                         </div>
                       </div>
@@ -381,12 +430,19 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <Badge
                           variant="outline"
-                          className={cn("text-[10px] font-medium px-2 py-0 border", cfg.badgeClass)}
+                          className={cn(
+                            "text-[10px] font-medium px-2 py-0 border",
+                            cfg.badgeClass
+                          )}
                         >
                           {cfg.label}
                         </Badge>
                         <span className="text-xs font-semibold tabular-nums text-foreground">
-                          ${orderTotal(o.items).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          $
+                          {total.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
                     </Link>
