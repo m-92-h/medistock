@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Layers, Trash2, Loader2, FolderKanban } from "lucide-react";
+import { Plus, Search, Layers, Trash2, Loader2, FolderKanban, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,6 +29,12 @@ export default function CategoriesPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Delete Modal State
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
@@ -82,6 +88,40 @@ export default function CategoriesPage() {
     }
   };
 
+  // Open Edit Modal
+  const openEdit = (category: Category) => {
+    setEditError(null);
+    setEditName(category.name);
+    setCategoryToEdit(category);
+  };
+
+  // Handle Edit Category
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryToEdit || !editName.trim()) return;
+
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      const res = await fetch(`/api/categories/${categoryToEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update category");
+
+      setCategoryToEdit(null);
+      fetchCategories();
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   // Handle Delete Category
   const handleDelete = async () => {
     if (!categoryToDelete) return;
@@ -120,12 +160,10 @@ export default function CategoriesPage() {
 
         {/* Create Category Dialog */}
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" /> Add Category
-            </Button>
+          <DialogTrigger render={<Button className="gap-2" />}>
+            <Plus className="w-4 h-4" /> Add Category
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md">
             <form onSubmit={handleCreate}>
               <DialogHeader>
                 <DialogTitle>Add New Category</DialogTitle>
@@ -222,18 +260,23 @@ export default function CategoriesPage() {
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setDeleteError(null);
-                          setCategoryToDelete(category);
-                        }}
-                        title="Delete category"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground" onClick={() => openEdit(category)} title="Edit category">
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setCategoryToDelete(category);
+                          }}
+                          title="Delete category"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -243,9 +286,39 @@ export default function CategoriesPage() {
         </CardContent>
       </Card>
 
+      {/* Edit Category Dialog */}
+      <Dialog open={!!categoryToEdit} onOpenChange={(open) => !open && setCategoryToEdit(null)}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleEdit}>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>Update the name of this category.</DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              {editError && <div className="p-3 bg-destructive/15 text-destructive rounded-md text-sm">{editError}</div>}
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-name">Category Name *</Label>
+                <Input id="edit-category-name" placeholder="e.g., Antibiotics, Surgical Supplies..." value={editName} onChange={(e) => setEditName(e.target.value)} required />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCategoryToEdit(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editLoading}>
+                {editLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Category</DialogTitle>
             <DialogDescription>
