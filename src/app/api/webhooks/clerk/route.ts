@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   const { type, data } = event;
 
-  if (type === "user.created" || type === "user.updated") {    
+  if (type === "user.created" || type === "user.updated") {
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
@@ -63,6 +63,25 @@ export async function POST(req: Request) {
       create: { id: data.id, email, name, role },
       update: { email, name, role },
     });
+
+    // ── Notify all admins when a new user accepts an invitation ───────────────
+    if (type === "user.created") {
+      const admins = await prisma.user.findMany({
+        where: { role: "admin" },
+        select: { id: true },
+      });
+
+      if (admins.length > 0) {
+        const displayName = name || email;
+        await prisma.alert.createMany({
+          data: admins.map((admin) => ({
+            type: "GENERAL" as const,
+            message: `${displayName} accepted their invitation and joined the system.`,
+            userId: admin.id,
+          })),
+        });
+      }
+    }
   }
 
   if (type === "user.deleted") {
