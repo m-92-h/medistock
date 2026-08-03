@@ -21,7 +21,7 @@ interface Movement {
 
 interface Alert {
   id: string;
-  type: "LOW_STOCK" | "EXPIRY" | "ORDER";
+  type: "LOW_STOCK" | "EXPIRY" | "ORDER" | "GENERAL";
   message: string;
   isRead: boolean;
   createdAt: Date;
@@ -67,6 +67,11 @@ const ALERT_CONFIG: Record<Alert["type"], { label: string; badgeClass: string; d
     label: "Order",
     badgeClass: "text-info border-info/30 bg-info/5",
     dotColor: "bg-info",
+  },
+  GENERAL: {
+    label: "General",
+    badgeClass: "text-muted-foreground border-border bg-muted/20",
+    dotColor: "bg-muted-foreground",
   },
 };
 
