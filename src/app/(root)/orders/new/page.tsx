@@ -78,17 +78,19 @@ export default function NewOrderPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleProductSelect = (index: number, productId: string | null) => {
-    const actualId = productId ?? "";
-    const matchedProduct = products.find((p) => p.id === actualId);
-    const updated = [...items];
-    updated[index] = {
-      ...updated[index],
-      productId: actualId,
-      unitPrice: matchedProduct ? matchedProduct.price : 0,
-    };
-    setItems(updated);
+ 
+
+const handleProductSelect = (index: number, productId: string | null) => {
+  const actualId = productId ?? "";
+  const matchedProduct = products.find((p) => p.id === actualId);
+  const updated = [...items];
+  updated[index] = {
+    ...updated[index],
+    productId: actualId,
+    unitPrice: matchedProduct ? Number(matchedProduct.price) : 0, 
   };
+  setItems(updated);
+};
 
   const handleRowChange = (index: number, field: "quantity" | "unitPrice", value: number) => {
     const updated = [...items];
