@@ -132,8 +132,8 @@ export default function OrdersPage() {
   };
 
   const calculateTotalAmount = (items: OrderItem[]) => {
-    return items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
-  };
+  return items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
+};
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

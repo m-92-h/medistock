@@ -99,9 +99,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
   };
 
   const calculateTotal = () => {
-    if (!order?.items) return 0;
-    return order.items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
-  };
+  if (!order?.items) return 0;
+  return order.items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
+};
 
   if (loading) {
     return (
@@ -236,9 +236,8 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                   <TableCell className="text-right font-medium">
                     {item.quantity} {item.product.unit || "units"}
                   </TableCell>
-                  <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-bold">${(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                </TableRow>
+                  <TableCell className="text-right">${Number(item.unitPrice).toFixed(2)}</TableCell>
+<TableCell className="text-right font-bold">${(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}</TableCell>                </TableRow>
               ))}
             </TableBody>
           </Table>
