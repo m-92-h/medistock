@@ -4,6 +4,17 @@ import { getCurrentUser } from "@/lib/auth";
 
 type Params = { params: Promise<{ id: string }> };
 
+function serializeOrder(order: any) {
+  return {
+    ...order,
+    items: order.items?.map((item: any) => ({
+      ...item,
+      unitPrice: Number(item.unitPrice),
+      quantity: Number(item.quantity),
+    })),
+  };
+}
+
 // GET /api/orders/[id]
 export async function GET(_req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
@@ -34,7 +45,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     }
   }
 
-  return NextResponse.json({ order });
+  return NextResponse.json({ order: serializeOrder(order) });
 }
 
 // PATCH /api/orders/[id] — استبدل دالة PATCH كاملةً بهذا:
@@ -165,5 +176,5 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     });
   }
 
-  return NextResponse.json({ order: updatedOrder });
+  return NextResponse.json({ order: serializeOrder(updatedOrder) });
 }

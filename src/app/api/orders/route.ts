@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
+function serializeOrder(order: any) {
+  return {
+    ...order,
+    items: order.items?.map((item: any) => ({
+      ...item,
+      unitPrice: Number(item.unitPrice),
+      quantity: Number(item.quantity),
+    })),
+  };
+}
+
 // GET /api/orders?status=&supplierId=&page=&limit=
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -52,9 +63,9 @@ export async function GET(req: NextRequest) {
   ]);
 
   return NextResponse.json({
-    orders,
-    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-  });
+  orders: orders.map(serializeOrder),
+  pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+});
 }
 
 // POST /api/orders
@@ -125,5 +136,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ order }, { status: 201 });
+  return NextResponse.json({ order: serializeOrder(order) }, { status: 201 });
 }

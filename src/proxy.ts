@@ -14,6 +14,11 @@ export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const method = req.method;
 
+  // أضف هذا السطر مؤقتاً
+  if (pathname === "/orders/new") {
+    console.log("DEBUG /orders/new →", { userId, role, metadata, sessionClaims });
+  }
+  
   // Redirect root
   if (pathname === "/") {
     return NextResponse.redirect(new URL(userId ? "/dashboard" : "/sign-in", req.url));
