@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft, Loader2, CheckCircle2, XCircle, Truck, PackageCheck, Building2, User, Clock, AlertCircle, FileText } from "lucide-react";
@@ -41,6 +42,9 @@ interface OrderDetail {
 
 export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+
+  const { user: clerkUser } = useUser();
+  const userRole = clerkUser?.publicMetadata?.role as string | undefined;
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,8 +147,8 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
         <div className="flex items-center gap-2">
           {updating && <Loader2 className="w-4 h-4 animate-spin text-primary mr-2" />}
 
-          {/* Admin Transitions: PENDING -> APPROVED | REJECTED */}
-          {order.status === "PENDING" && (
+          {/* Admin فقط: PENDING → APPROVED | REJECTED */}
+          {order.status === "PENDING" && userRole === "admin" && (
             <>
               <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" disabled={updating} onClick={() => handleStatusUpdate("REJECTED")}>
                 <XCircle className="w-4 h-4 mr-1.5" /> Reject Order
@@ -155,15 +159,15 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
             </>
           )}
 
-          {/* Supplier Transition: APPROVED -> SHIPPED */}
-          {order.status === "APPROVED" && (
+          {/* Supplier فقط: APPROVED → SHIPPED */}
+          {order.status === "APPROVED" && userRole === "supplier" && (
             <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" disabled={updating} onClick={() => handleStatusUpdate("SHIPPED")}>
               <Truck className="w-4 h-4" /> Mark as Shipped
             </Button>
           )}
 
-          {/* Employee Transition: SHIPPED -> DELIVERED */}
-          {order.status === "SHIPPED" && (
+          {/* Employee فقط: SHIPPED → DELIVERED */}
+          {order.status === "SHIPPED" && userRole === "employee" && (
             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" disabled={updating} onClick={() => handleStatusUpdate("DELIVERED")}>
               <PackageCheck className="w-4 h-4" /> Confirm Delivery
             </Button>

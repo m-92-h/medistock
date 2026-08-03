@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { ShoppingBag, Plus, RefreshCw, Filter, ChevronLeft, ChevronRight, Loader2, Clock, CheckCircle2, XCircle, Truck, PackageCheck, Eye, Building2 } from "lucide-react";
@@ -47,6 +48,9 @@ interface Pagination {
 }
 
 export default function OrdersPage() {
+  const { user: clerkUser } = useUser();
+  const userRole = clerkUser?.publicMetadata?.role as string | undefined;
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -147,11 +151,13 @@ export default function OrdersPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
 
-          <Link href="/orders/new">
-            <Button size="sm" className="gap-2">
-              <Plus className="w-4 h-4" /> Create Order
-            </Button>
-          </Link>
+          {userRole !== "supplier" && (
+            <Link href="/orders/new">
+              <Button size="sm" className="gap-2">
+                <Plus className="w-4 h-4" /> Create Order
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

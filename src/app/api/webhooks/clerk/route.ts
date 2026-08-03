@@ -51,7 +51,10 @@ export async function POST(req: Request) {
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
-    const rawRole = (data.public_metadata?.role as string | undefined) ?? (data.unsafe_metadata?.role as string | undefined) ?? "employee";
+    const rawRole =
+      (data.public_metadata?.role as string | undefined) ??
+      (data.unsafe_metadata?.role as string | undefined) ??
+      "employee";
 
     const validRoles: Role[] = ["admin", "employee", "supplier"];
     const role: Role = validRoles.includes(rawRole as Role) ? (rawRole as Role) : "employee";
@@ -64,7 +67,23 @@ export async function POST(req: Request) {
       update: { email, name, role },
     });
 
-    // ── Notify all admins when a new user accepts an invitation ───────────────
+    // ✅ الإصلاح الرئيسي: ربط المورد بحسابه عند التسجيل أو التحديث
+    if (role === "supplier") {
+      const supplierRecord = await prisma.supplier.findUnique({
+        where: { email },
+        select: { id: true, userId: true },
+      });
+
+      // اربط فقط إذا كان الـ Supplier موجوداً وغير مربوط بأي مستخدم آخر
+      if (supplierRecord && !supplierRecord.userId) {
+        await prisma.supplier.update({
+          where: { email },
+          data: { userId: data.id },
+        });
+      }
+    }
+
+    // إشعار الأدمن عند قبول الدعوة
     if (type === "user.created") {
       const admins = await prisma.user.findMany({
         where: { role: "admin" },
@@ -85,6 +104,11 @@ export async function POST(req: Request) {
   }
 
   if (type === "user.deleted") {
+    // ✅ فك الربط من Supplier قبل حذف المستخدم لتجنب cascade error
+    await prisma.supplier.updateMany({
+      where: { userId: data.id },
+      data: { userId: null },
+    });
     await prisma.user.deleteMany({ where: { id: data.id } });
   }
 

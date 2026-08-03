@@ -37,10 +37,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json({ order });
 }
 
-// PATCH /api/orders/[id]  — status transitions gated by role
-// Admin:    PENDING → APPROVED | REJECTED
-// Supplier: APPROVED → SHIPPED
-// Employee: SHIPPED → DELIVERED (auto-creates IN stock movement)
+// PATCH /api/orders/[id] — استبدل دالة PATCH كاملةً بهذا:
 export async function PATCH(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,30 +53,31 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Role-based transition guards
-  const allowed = (() => {
-    if (user.role === "admin") return ["APPROVED", "REJECTED"].includes(status) && order.status === "PENDING";
-    if (user.role === "supplier") {
-      // Supplier must own this order
-      return status === "SHIPPED" && order.status === "APPROVED";
-    }
-    if (user.role === "employee") return status === "DELIVERED" && order.status === "SHIPPED";
-    return false;
-  })();
+  // ✅ فحص ملكية المورد مُدمج داخل منطق الصلاحيات
+  let allowed = false;
+
+  if (user.role === "admin") {
+    allowed = ["APPROVED", "REJECTED"].includes(status) && order.status === "PENDING";
+  } else if (user.role === "supplier") {
+    const supplierRecord = await prisma.supplier.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    // تحقق من الـ role والملكية والـ transition في خطوة واحدة
+    allowed =
+      !!supplierRecord &&
+      order.supplierId === supplierRecord.id &&
+      status === "SHIPPED" &&
+      order.status === "APPROVED";
+  } else if (user.role === "employee") {
+    allowed = status === "DELIVERED" && order.status === "SHIPPED";
+  }
 
   if (!allowed) {
     return NextResponse.json(
       { error: `Cannot transition from ${order.status} to ${status} as ${user.role}` },
       { status: 403 }
     );
-  }
-
-  // Supplier check
-  if (user.role === "supplier") {
-    const supplierRecord = await prisma.supplier.findUnique({ where: { userId: user.id } });
-    if (!supplierRecord || order.supplierId !== supplierRecord.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
   }
 
   const now = new Date();
@@ -100,7 +98,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   });
 
-  // When delivered: create IN stock movements for all items
+  // عند التسليم: أنشئ stock movements وحدّث الكميات
   if (status === "DELIVERED") {
     await prisma.$transaction(
       order.items.map((item) =>
@@ -116,7 +114,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       )
     );
 
-    // Update product quantities
     await prisma.$transaction(
       order.items.map((item) =>
         prisma.product.update({
@@ -126,7 +123,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       )
     );
 
-    // Notify creator
     await prisma.alert.create({
       data: {
         type: "ORDER",
@@ -136,12 +132,34 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     });
   }
 
-  // Notify supplier user when order is approved
+  // إشعار المورد عند الموافقة
   if (status === "APPROVED" && order.supplier.userId) {
     await prisma.alert.create({
       data: {
         type: "ORDER",
         message: `Order #${id.slice(-8).toUpperCase()} has been approved. Please proceed with shipping.`,
+        userId: order.supplier.userId,
+      },
+    });
+  }
+
+  // ✅ إضافة ناقصة: إشعار منشئ الطلب عند الشحن
+  if (status === "SHIPPED") {
+    await prisma.alert.create({
+      data: {
+        type: "ORDER",
+        message: `Order #${id.slice(-8).toUpperCase()} has been shipped by the supplier.`,
+        userId: order.createdById,
+      },
+    });
+  }
+
+  // ✅ إضافة ناقصة: إشعار المورد عند الرفض
+  if (status === "REJECTED" && order.supplier.userId) {
+    await prisma.alert.create({
+      data: {
+        type: "ORDER",
+        message: `Order #${id.slice(-8).toUpperCase()} has been rejected by the administrator.`,
         userId: order.supplier.userId,
       },
     });
