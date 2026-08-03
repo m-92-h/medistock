@@ -37,7 +37,7 @@ export default function AlertsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
 
   // Create Modal (Admin)
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);  
   const [newType, setNewType] = useState<string>("GENERAL");
   const [newMessage, setNewMessage] = useState("");
   const [newProductId, setNewProductId] = useState("");

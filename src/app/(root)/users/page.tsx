@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Users, UserPlus, Trash2, Loader2, Mail, RefreshCw, CheckCircle2, AlertCircle, Pencil, ShieldCheck, Briefcase, Building2, Clock, XCircle, SendHorizonal } from "lucide-react";
+import { Users, UserPlus, Trash2, Loader2, Mail, RefreshCw, Pencil, ShieldCheck, Briefcase, Building2, Clock, XCircle, SendHorizonal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -101,28 +102,6 @@ function formatDate(timestamp: number): string {
     month: "short",
     day: "numeric",
   });
-}
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-
-interface ToastItem {
-  id: number;
-  type: "success" | "error";
-  message: string;
-}
-
-let toastCounter = 0;
-
-function useToasts() {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const push = useCallback((type: "success" | "error", message: string) => {
-    const id = ++toastCounter;
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
-
-  return { toasts, push };
 }
 
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
@@ -328,8 +307,6 @@ export default function UsersPage() {
   const [inviteRole, setInviteRole] = useState<"employee" | "supplier">("employee");
   const [inviting, setInviting] = useState(false);
 
-  const { toasts, push: pushToast } = useToasts();
-
   // ── Fetch Users ────────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -376,10 +353,10 @@ export default function UsersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete user");
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      pushToast("success", "User deleted successfully.");
+      toast.success("User deleted successfully.");
       setDeleteTarget(null);
     } catch (err: any) {
-      pushToast("error", err.message);
+      toast.error(err.message);
       setDeleteTarget(null);
     } finally {
       setDeletingUser(false);
@@ -395,10 +372,10 @@ export default function UsersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to revoke invitation");
       setInvitations((prev) => prev.filter((i) => i.id !== revokeTarget.id));
-      pushToast("success", `Invitation to ${revokeTarget.email} revoked.`);
+      toast.success(`Invitation to ${revokeTarget.email} revoked.`);
       setRevokeTarget(null);
     } catch (err: any) {
-      pushToast("error", err.message);
+      toast.error(err.message);
       setRevokeTarget(null);
     } finally {
       setRevokingId(null);
@@ -419,11 +396,11 @@ export default function UsersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send invitation");
-      pushToast("success", `Invitation sent to ${inviteEmail}.`);
+      toast.success(`Invitation sent to ${inviteEmail}.`);
       setInviteEmail("");
       await fetchInvitations();
     } catch (err: any) {
-      pushToast("error", err.message);
+      toast.error(err.message);
     } finally {
       setInviting(false);
       setInviteOpen(false);
@@ -443,20 +420,6 @@ export default function UsersPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* ── Toast stack ── */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-80">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`flex items-start gap-2.5 p-3.5 rounded-lg border text-sm shadow-md animate-in slide-in-from-right-5 fade-in
-              ${t.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400"}`}
-          >
-            {t.type === "success" ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-            <span>{t.message}</span>
-          </div>
-        ))}
-      </div>
-
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -718,9 +681,9 @@ export default function UsersPage() {
           onSaved={(updated) => {
             setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
             setEditTarget(null);
-            pushToast("success", "User updated successfully.");
+            toast.success("User updated successfully.");
           }}
-          onError={(msg) => pushToast("error", msg)}
+          onError={(msg) => toast.error(msg)}
         />
       )}
 

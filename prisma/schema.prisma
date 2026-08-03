@@ -41,7 +41,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // العلاقات
   stockMovements StockMovement[]
   createdOrders  Order[]         @relation("CreatedBy")
   supplier       Supplier?       @relation("SupplierUser")

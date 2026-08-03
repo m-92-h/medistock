@@ -139,10 +139,10 @@ export function AppNavbar() {
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
       <SidebarTrigger className="-ml-1 h-8 w-8" />
-      <Separator orientation="vertical" className="mr-2 h-4" />
+      <Separator orientation="vertical" className="mr-2 h-full" />
 
       <Breadcrumb className="flex-1">
-        <BreadcrumbList>
+        <BreadcrumbList className="hidden sm:flex" >
           {breadcrumbs.map((crumb, i) => (
             <span key={crumb.href} className="flex items-center gap-1.5">
               {i > 0 && <BreadcrumbSeparator />}
@@ -235,8 +235,6 @@ export function AppNavbar() {
             )}
           </PopoverContent>
         </Popover>
-
-        <Separator orientation="vertical" className="h-4" />
 
         <UserButton
           appearance={{

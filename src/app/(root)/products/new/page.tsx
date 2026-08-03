@@ -3,48 +3,45 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft, Save, Loader2, PackagePlus, AlertCircle,
-  Building2, DollarSign, Calendar, Layers, CheckCircle2,
-} from "lucide-react";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
+import { ArrowLeft, Save, Loader2, PackagePlus, AlertCircle, Building2, DollarSign, Calendar, Layers, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge }    from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 
-interface Option { id: string; name: string; }
+interface Option {
+  id: string;
+  name: string;
+}
 
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Option[]>([]);
-  const [suppliers,  setSuppliers]  = useState<Option[]>([]);
+  const [suppliers, setSuppliers] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    name:        "",
-    sku:         "",
+    name: "",
+    sku: "",
     description: "",
-    unit:        "Box",
-    quantity:    0,
+    unit: "Box",
+    quantity: 0,
     minQuantity: 10,
-    price:       "",
-    expiryDate:  "",
-    categoryId:  "",
-    supplierId:  "",
+    price: "",
+    expiryDate: "",
+    categoryId: "",
+    supplierId: "",
   });
 
   useEffect(() => {
     async function loadMetadata() {
       try {
-        const [catRes, supRes] = await Promise.all([
-          fetch("/api/categories"),
-          fetch("/api/suppliers"),
-        ]);
+        const [catRes, supRes] = await Promise.all([fetch("/api/categories"), fetch("/api/suppliers")]);
         if (catRes.ok) {
           const data = await catRes.json();
           setCategories(data.categories || data);
@@ -84,13 +81,13 @@ export default function NewProductPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/products", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          quantity:    Number(form.quantity),
+          quantity: Number(form.quantity),
           minQuantity: Number(form.minQuantity),
-          price:       parsedPrice,
+          price: parsedPrice,
         }),
       });
 
@@ -107,32 +104,22 @@ export default function NewProductPage() {
   };
 
   // ─── Live Preview Calculations ────────────────────────────────────────────
-  const totalStockValue     = Number(form.price || 0) * Number(form.quantity || 0);
-  const isLowInitialStock   = form.quantity > 0 && Number(form.quantity) <= Number(form.minQuantity);
+  const totalStockValue = Number(form.price || 0) * Number(form.quantity || 0);
+  const isLowInitialStock = form.quantity > 0 && Number(form.quantity) <= Number(form.minQuantity);
   const selectedCategoryName = categories.find((c) => c.id === form.categoryId)?.name;
   const selectedSupplierName = suppliers.find((s) => s.id === form.supplierId)?.name;
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 text-left">
-
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline" size="icon"
-            render={<Link href="/products" />}
-            className="h-9 w-9 rounded-xl cursor-pointer transition-colors duration-200"
-            aria-label="Back to products list"
-          >
+          <Button variant="outline" size="icon" render={<Link href="/products" />} className="h-9 w-9 rounded-xl cursor-pointer transition-colors duration-200" aria-label="Back to products list">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              Add New Product
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Register new pharmaceutical or medical inventory item to the warehouse.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">Add New Product</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Register new pharmaceutical or medical inventory item to the warehouse.</p>
           </div>
         </div>
       </div>
@@ -146,10 +133,8 @@ export default function NewProductPage() {
       )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* ─── Main Form ───────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
-
           {/* Basic Info */}
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="pb-4">
@@ -164,24 +149,14 @@ export default function NewProductPage() {
                   <Label htmlFor="name" className="text-xs font-medium">
                     Product Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="name" required placeholder="e.g. Paracetamol 500mg"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="text-xs sm:text-sm"
-                  />
+                  <Input id="name" required placeholder="e.g. Paracetamol 500mg" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-xs sm:text-sm" />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="sku" className="text-xs font-medium">
                     SKU Code <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="sku" required placeholder="e.g. MED-10023"
-                    value={form.sku}
-                    onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })}
-                    className="text-xs sm:text-sm font-mono"
-                  />
+                  <Input id="sku" required placeholder="e.g. MED-10023" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })} className="text-xs sm:text-sm font-mono" />
                 </div>
               </div>
 
@@ -198,10 +173,7 @@ export default function NewProductPage() {
                       if (error?.includes("category")) setError(null);
                     }}
                   >
-                    <SelectTrigger
-                      id="category-select"
-                      className={`text-xs sm:text-sm cursor-pointer ${!form.categoryId && error?.includes("category") ? "border-destructive" : ""}`}
-                    >
+                    <SelectTrigger id="category-select" className={`text-xs sm:text-sm cursor-pointer ${!form.categoryId && error?.includes("category") ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -226,10 +198,7 @@ export default function NewProductPage() {
                       if (error?.includes("supplier")) setError(null);
                     }}
                   >
-                    <SelectTrigger
-                      id="supplier-select"
-                      className={`text-xs sm:text-sm cursor-pointer ${!form.supplierId && error?.includes("supplier") ? "border-destructive" : ""}`}
-                    >
+                    <SelectTrigger id="supplier-select" className={`text-xs sm:text-sm cursor-pointer ${!form.supplierId && error?.includes("supplier") ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Select Supplier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -251,65 +220,45 @@ export default function NewProductPage() {
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-success" /> Stock & Pricing
               </CardTitle>
-              <CardDescription className="text-xs">
-                Set initial batch quantities, minimum thresholds, and prices
-              </CardDescription>
+              <CardDescription className="text-xs">Set initial batch quantities, minimum thresholds, and prices</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unit" className="text-xs font-medium">Unit of Measure</Label>
-                  <Input
-                    id="unit" placeholder="Box, Bottle, Strip..."
-                    value={form.unit}
-                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                    className="text-xs sm:text-sm"
-                  />
+                  <Label htmlFor="unit" className="text-xs font-medium">
+                    Unit of Measure
+                  </Label>
+                  <Input id="unit" placeholder="Box, Bottle, Strip..." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="text-xs sm:text-sm" />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="price" className="text-xs font-medium">
                     Unit Price ($) <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="price" type="number" step="0.01" min="0" required
-                    placeholder="0.00"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="text-xs sm:text-sm tabular-nums font-mono"
-                  />
+                  <Input id="price" type="number" step="0.01" min="0" required placeholder="0.00" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="text-xs sm:text-sm tabular-nums font-mono" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="expiryDate" className="text-xs font-medium">Expiration Date</Label>
-                  <Input
-                    id="expiryDate" type="date"
-                    value={form.expiryDate}
-                    onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-                    className="text-xs sm:text-sm cursor-pointer"
-                  />
+                  <Label htmlFor="expiryDate" className="text-xs font-medium">
+                    Expiration Date
+                  </Label>
+                  <Input id="expiryDate" type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} className="text-xs sm:text-sm cursor-pointer" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity" className="text-xs font-medium">Initial Stock Quantity</Label>
-                  <Input
-                    id="quantity" type="number" min="0"
-                    value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                    className="text-xs sm:text-sm tabular-nums font-mono"
-                  />
+                  <Label htmlFor="quantity" className="text-xs font-medium">
+                    Initial Stock Quantity
+                  </Label>
+                  <Input id="quantity" type="number" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className="text-xs sm:text-sm tabular-nums font-mono" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="minQuantity" className="text-xs font-medium">Low Stock Threshold (Alert)</Label>
-                  <Input
-                    id="minQuantity" type="number" min="0"
-                    value={form.minQuantity}
-                    onChange={(e) => setForm({ ...form, minQuantity: Number(e.target.value) })}
-                    className="text-xs sm:text-sm tabular-nums font-mono"
-                  />
+                  <Label htmlFor="minQuantity" className="text-xs font-medium">
+                    Low Stock Threshold (Alert)
+                  </Label>
+                  <Input id="minQuantity" type="number" min="0" value={form.minQuantity} onChange={(e) => setForm({ ...form, minQuantity: Number(e.target.value) })} className="text-xs sm:text-sm tabular-nums font-mono" />
                 </div>
               </div>
 
@@ -318,7 +267,8 @@ export default function NewProductPage() {
                   Description &amp; Storage Guidelines
                 </Label>
                 <Textarea
-                  id="description" rows={3}
+                  id="description"
+                  rows={3}
                   placeholder="Notes regarding storage conditions, special handling, or active ingredients..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -330,21 +280,11 @@ export default function NewProductPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button
-              type="button" variant="outline"
-              render={<Link href="/products" />}
-              className="text-xs sm:text-sm cursor-pointer transition-colors duration-200"
-            >
+            <Button type="button" variant="outline" render={<Link href="/products" />} className="text-xs sm:text-sm cursor-pointer transition-colors duration-200">
               Cancel
             </Button>
-            <Button
-              type="submit" disabled={loading}
-              className="gap-2 text-xs sm:text-sm cursor-pointer transition-all duration-200"
-            >
-              {loading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Save className="w-4 h-4" />
-              }
+            <Button type="submit" disabled={loading} className="gap-2 text-xs sm:text-sm cursor-pointer transition-all duration-200">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Product
             </Button>
           </div>
@@ -364,13 +304,9 @@ export default function NewProductPage() {
             <CardContent className="p-4 space-y-4">
               {/* Identity */}
               <div>
-                <h3 className="text-base font-bold text-foreground truncate">
-                  {form.name || "Untitled Product"}
-                </h3>
+                <h3 className="text-base font-bold text-foreground truncate">{form.name || "Untitled Product"}</h3>
                 <div className="flex items-center gap-2 mt-1">
-                  <code className="bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono text-muted-foreground border border-border/40">
-                    {form.sku || "SKU-XXXXX"}
-                  </code>
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono text-muted-foreground border border-border/40">{form.sku || "SKU-XXXXX"}</code>
                   <span className="text-xs text-muted-foreground">• Unit: {form.unit || "N/A"}</span>
                 </div>
               </div>
@@ -408,9 +344,7 @@ export default function NewProductPage() {
               <div className="border-t border-border/40 pt-3 space-y-2">
                 <div className="flex justify-between items-baseline text-xs">
                   <span className="text-muted-foreground">Unit Price:</span>
-                  <span className="font-semibold text-foreground tabular-nums font-mono">
-                    ${Number(form.price || 0).toFixed(2)}
-                  </span>
+                  <span className="font-semibold text-foreground tabular-nums font-mono">${Number(form.price || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-baseline text-xs">
                   <span className="text-muted-foreground">Initial Quantity:</span>
@@ -421,7 +355,8 @@ export default function NewProductPage() {
                 <div className="flex justify-between items-baseline text-sm pt-2 font-bold border-t border-border/30">
                   <span>Estimated Batch Value:</span>
                   <span className="text-success tabular-nums font-mono">
-                    ${totalStockValue.toLocaleString("en-US", {
+                    $
+                    {totalStockValue.toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

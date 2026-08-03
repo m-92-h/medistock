@@ -4,19 +4,14 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import {
-  ArrowLeft, Edit, Trash2, AlertTriangle,
-  ArrowUpRight, ArrowDownLeft, Calendar, Package,
-  Building2, DollarSign, Layers, History, CheckCircle2, Loader2,
-} from "lucide-react";
+import { ArrowLeft, Edit, Trash2, AlertTriangle, ArrowUpRight, ArrowDownLeft, Calendar, Package, Building2, DollarSign, Layers, History, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
-  Tooltip, CartesianGrid, Legend,
-} from "recharts";
+import { toast } from "sonner";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StockMovement {
@@ -29,31 +24,34 @@ interface StockMovement {
 }
 
 interface ProductDetails {
-  id: string; name: string; sku: string; description?: string;
-  unit: string; quantity: number; minQuantity: number; price: number;
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  unit: string;
+  quantity: number;
+  minQuantity: number;
+  price: number;
   expiryDate?: string;
   category: { name: string };
   supplier: { name: string; email: string; phone?: string };
   stockMovements: StockMovement[];
 }
 
-export default function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id }   = use(params);
-  const router   = useRouter();
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
 
   const { user: clerkUser } = useUser();
-  const userRole  = clerkUser?.publicMetadata?.role as string | undefined;
-  const canEdit   = userRole === "admin" || userRole === "employee";
+  const userRole = clerkUser?.publicMetadata?.role as string | undefined;
+  const canEdit = userRole === "admin" || userRole === "employee";
   const canDelete = userRole === "admin" || userRole === "employee";
 
-  const [product,       setProduct]       = useState<ProductDetails | null>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [fetchError,    setFetchError]    = useState<string | null>(null);
+  const [product, setProduct] = useState<ProductDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
@@ -76,22 +74,29 @@ export default function ProductDetailPage({
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
-
+    const productName = product?.name ?? "Product";
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       if (res.ok) {
+        toast.success("Product deleted", {
+          description: `"${productName}" has been permanently removed.`,
+        });
         router.push("/products");
         router.refresh();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to delete product");
+        toast.error("Failed to delete product", {
+          description: data.error || "An unexpected error occurred.",
+        });
       }
     } catch {
-      alert("An unexpected error occurred");
+      toast.error("Failed to delete product", {
+        description: "An unexpected error occurred.",
+      });
     } finally {
       setDeleteLoading(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -109,9 +114,7 @@ export default function ProductDetailPage({
   if (fetchError || !product) {
     return (
       <div className="p-12 text-center space-y-4 max-w-md mx-auto">
-        <p className="text-muted-foreground text-sm">
-          {fetchError || "Product not found or has been permanently removed."}
-        </p>
+        <p className="text-muted-foreground text-sm">{fetchError || "Product not found or has been permanently removed."}</p>
         <Button variant="outline" render={<Link href="/products" />} className="cursor-pointer text-xs">
           Back to Products List
         </Button>
@@ -124,34 +127,47 @@ export default function ProductDetailPage({
     .slice(0, 10)
     .reverse()
     .map((m) => ({
-      date:     new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      Incoming: m.type === "IN"  ? m.quantity : 0,
+      date: new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      Incoming: m.type === "IN" ? m.quantity : 0,
       Outgoing: m.type === "OUT" ? m.quantity : 0,
     }));
 
-  const isLowStock      = product.quantity > 0 && product.quantity <= product.minQuantity;
-  const isOutOfStock    = product.quantity === 0;
+  const isLowStock = product.quantity > 0 && product.quantity <= product.minQuantity;
+  const isOutOfStock = product.quantity === 0;
   const totalStockValue = Number(product.price || 0) * Number(product.quantity || 0);
 
   return (
     <div className="p-6 space-y-6 text-left max-w-7xl mx-auto">
-
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{product.name}"</span>? This action cannot be undone and will remove all associated stock movements.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteLoading} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2">
+              {deleteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              Delete Product
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline" size="icon"
-            render={<Link href="/products" />}
-            className="h-9 w-9 rounded-xl cursor-pointer transition-colors"
-            aria-label="Back to products"
-          >
+          <Button variant="outline" size="icon" render={<Link href="/products" />} className="h-9 w-9 rounded-xl cursor-pointer transition-colors" aria-label="Back to products">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">{product.name}</h1>
               {isOutOfStock ? (
-                <Badge variant="destructive" className="text-[10px] font-medium">Out of Stock</Badge>
+                <Badge variant="destructive" className="text-[10px] font-medium">
+                  Out of Stock
+                </Badge>
               ) : isLowStock ? (
                 <Badge variant="outline" className="border-warning/40 text-warning bg-warning/10 text-[10px] font-medium">
                   Low Stock
@@ -163,10 +179,7 @@ export default function ProductDetailPage({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              SKU:{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono text-[11px] border border-border/40">
-                {product.sku}
-              </code>
+              SKU: <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono text-[11px] border border-border/40">{product.sku}</code>
             </p>
           </div>
         </div>
@@ -174,25 +187,13 @@ export default function ProductDetailPage({
         {(canEdit || canDelete) && (
           <div className="flex items-center gap-2">
             {canEdit && (
-              <Button
-                variant="outline"
-                render={<Link href={`/products/${id}/edit`} />}
-                className="gap-2 text-xs cursor-pointer transition-colors"
-              >
+              <Button variant="outline" render={<Link href={`/products/${id}/edit`} />} className="gap-2 text-xs cursor-pointer transition-colors">
                 <Edit className="w-3.5 h-3.5" /> Edit
               </Button>
             )}
             {canDelete && (
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteLoading}
-                className="gap-2 text-xs cursor-pointer transition-colors"
-              >
-                {deleteLoading
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Trash2 className="w-3.5 h-3.5" />
-                }
+              <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} disabled={deleteLoading} className="gap-2 text-xs cursor-pointer transition-colors">
+                {deleteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 Delete
               </Button>
             )}
@@ -202,7 +203,6 @@ export default function ProductDetailPage({
 
       {/* ─── KPI Cards ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
         {/* Current Stock */}
         <Card className="border border-border/60 shadow-sm">
           <CardHeader className="p-4 pb-2">
@@ -239,13 +239,12 @@ export default function ProductDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold tracking-tight tabular-nums font-mono">
-              ${Number(product.price || 0).toFixed(2)}
-            </div>
+            <div className="text-2xl font-bold tracking-tight tabular-nums font-mono">${Number(product.price || 0).toFixed(2)}</div>
             <p className="text-[11px] text-muted-foreground mt-1">
               Total stock value:{" "}
               <span className="font-semibold text-foreground tabular-nums font-mono">
-                ${totalStockValue.toLocaleString("en-US", {
+                $
+                {totalStockValue.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -283,7 +282,9 @@ export default function ProductDetailPage({
             <div className="text-sm font-semibold text-foreground font-mono">
               {product.expiryDate
                 ? new Date(product.expiryDate).toLocaleDateString("en-US", {
-                    year: "numeric", month: "short", day: "numeric",
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
                   })
                 : "Not Specified"}
             </div>
@@ -295,47 +296,91 @@ export default function ProductDetailPage({
       </div>
 
       {/* ─── Stock Activity Chart ─────────────────────────────────────────────── */}
-      {chartData.length > 0 && (
-        <Card className="border border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <History className="w-4 h-4 text-primary" /> Stock Activity Chart
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Recent inventory inflows (IN) vs outflows (OUT) — last 10 movements
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                  <XAxis
-                    dataKey="date" tickLine={false} axisLine={false}
-                    tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
-                  />
-                  <YAxis
-                    tickLine={false} axisLine={false}
-                    tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--color-popover)",
-                      borderColor:     "var(--color-border)",
-                      borderRadius:    "8px",
-                      fontSize:        "12px",
-                      boxShadow:       "0 4px 12px rgba(0,0,0,0.05)",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
-                  <Bar dataKey="Incoming" fill="var(--color-success)"     radius={[4, 4, 0, 0]} name="Inflow (IN)"  />
-                  <Bar dataKey="Outgoing" fill="var(--color-destructive)" radius={[4, 4, 0, 0]} name="Outflow (OUT)" />
-                </BarChart>
-              </ResponsiveContainer>
+{chartData.length > 0 && (
+  <Card className="border border-border/60 shadow-sm overflow-hidden">
+    <CardHeader className="pb-4 border-b border-border/40">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="space-y-1">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <History className="w-3.5 h-3.5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-      )}
+            Stock Activity
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Last {chartData.length} movements — inflows vs outflows
+          </CardDescription>
+        </div>
+
+        {/* Legend manual */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[oklch(0.73_0.17_148)] dark:bg-[oklch(0.8_0.15_148)]" />
+            <span className="text-[11px] text-muted-foreground font-medium">Inflow (IN)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[oklch(0.64_0.22_27)] dark:bg-[oklch(0.71_0.17_28)]" />
+            <span className="text-[11px] text-muted-foreground font-medium">Outflow (OUT)</span>
+          </div>
+        </div>
+      </div>
+    </CardHeader>
+
+    <CardContent className="pt-6 pb-4">
+      <div className="h-[240px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }} barGap={4} barCategoryGap="32%">
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="oklch(0.92 0.01 250 / 0.6)"
+            />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 11, fill: "oklch(0.56 0.03 255)" }}
+              dy={6}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 11, fill: "oklch(0.56 0.03 255)" }}
+              allowDecimals={false}
+            />
+            <Tooltip
+              cursor={{ fill: "oklch(0.69 0.15 238 / 0.05)", radius: 6 }}
+              contentStyle={{
+                backgroundColor: "oklch(1 0 0)",
+                borderColor: "oklch(0.92 0.01 250)",
+                borderRadius: "10px",
+                fontSize: "12px",
+                boxShadow: "0 4px 20px oklch(0.2 0.03 255 / 0.08)",
+                padding: "8px 12px",
+              }}
+              labelStyle={{ fontWeight: 600, marginBottom: 4, color: "oklch(0.205 0.025 255)" }}
+              itemStyle={{ color: "oklch(0.56 0.03 255)" }}
+            />
+            <Bar
+              dataKey="Incoming"
+              name="Inflow (IN)"
+              fill="oklch(0.73 0.17 148)"
+              radius={[5, 5, 0, 0]}
+              maxBarSize={36}
+            />
+            <Bar
+              dataKey="Outgoing"
+              name="Outflow (OUT)"
+              fill="oklch(0.64 0.22 27)"
+              radius={[5, 5, 0, 0]}
+              maxBarSize={36}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
+)}
 
       {/* ─── Movement Log Table ───────────────────────────────────────────────── */}
       <Card className="border border-border/60 shadow-sm overflow-hidden">
@@ -377,13 +422,8 @@ export default function ProductDetailPage({
                     <TableCell className="font-bold tabular-nums font-mono text-foreground">
                       {movement.quantity} {product.unit}
                     </TableCell>
-                    <TableCell className="font-medium text-foreground">
-                      {movement.user?.name || movement.user?.email || "System"}
-                    </TableCell>
-                    <TableCell
-                      className="text-muted-foreground max-w-[200px] truncate"
-                      title={movement.note}
-                    >
+                    <TableCell className="font-medium text-foreground">{movement.user?.name || movement.user?.email || "System"}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate" title={movement.note}>
                       {movement.note || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono">
