@@ -47,24 +47,36 @@ export default function NewOrderPage() {
   // Load Suppliers & Products
   useEffect(() => {
     async function initData() {
-      try {
-        const [supRes, prodRes] = await Promise.all([fetch("/api/suppliers?minimal"), fetch("/api/products?limit=100")]);
+  try {
+    const [supRes, prodRes] = await Promise.all([
+      fetch("/api/suppliers?minimal"),
+      fetch("/api/products?limit=100"),
+    ]);
 
-        if (supRes.ok) {
-          const supData = await supRes.json();
-          setSuppliers(supData || []);
-        }
-
-        if (prodRes.ok) {
-          const prodData = await prodRes.json();
-          setProducts(prodData.products || []);
-        }
-      } catch (err) {
-        console.error("Error loading dependencies:", err);
-      } finally {
-        setLoadingData(false);
-      }
+    if (supRes.ok) {
+      const supData = await supRes.json();
+      // supData قد يكون array مباشرة أو { suppliers: [] }
+      setSuppliers(Array.isArray(supData) ? supData : supData.suppliers || []);
+    } else {
+      console.error("Suppliers fetch failed:", supRes.status);
+      setSuppliers([]);
     }
+
+    if (prodRes.ok) {
+      const prodData = await prodRes.json();
+      setProducts(Array.isArray(prodData) ? prodData : prodData.products || []);
+    } else {
+      console.error("Products fetch failed:", prodRes.status);
+      setProducts([]);
+    }
+  } catch (err) {
+    console.error("Error loading dependencies:", err);
+    setSuppliers([]);
+    setProducts([]);
+  } finally {
+    setLoadingData(false);
+  }
+}
 
     initData();
   }, []);
