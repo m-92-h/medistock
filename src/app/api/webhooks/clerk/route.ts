@@ -52,17 +52,15 @@ export async function POST(req: Request) {
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
-    const rawRole = (data.public_metadata?.role as string | undefined) ?? (data.unsafe_metadata?.role as string | undefined) ?? "employee";
+    const rawRole =
+      (data.public_metadata?.role as string | undefined) ??
+      (data.unsafe_metadata?.role as string | undefined) ??
+      "employee";
 
     const validRoles: Role[] = ["admin", "employee", "supplier"];
     const role: Role = validRoles.includes(rawRole as Role) ? (rawRole as Role) : "employee";
 
     const name = [data.first_name, data.last_name].filter(Boolean).join(" ") || null;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { id: data.id },
-      select: { id: true },
-    });
 
     await prisma.user.upsert({
       where: { id: data.id },
@@ -70,7 +68,7 @@ export async function POST(req: Request) {
       update: { email, name, role },
     });
 
-    // ── Link supplier to user account ──────────────────────────────────────
+    // ── ربط المورد بحسابه ────────────────────────────────────────────────
     if (role === "supplier") {
       const supplierRecord = await prisma.supplier.findUnique({
         where: { email },
@@ -84,34 +82,36 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── Notify admins on new registration only ─────────────────────────────
-    if (type === "user.created" && !existingUser) {
+    // ── إشعار الأدمن عند قبول الدعوة (user.created فقط) ──────────────────
+    if (type === "user.created") {
       const admins = await prisma.user.findMany({
         where: { role: "admin" },
         select: { id: true },
       });
 
       if (admins.length > 0) {
-        await prisma.$transaction(async (tx) => {
-          const alreadyNotified = await tx.alert.findFirst({
-            where: {
-              type: "GENERAL",
-              message: { contains: `[uid:${data.id}]` },
-            },
-            select: { id: true },
-          });
+        const displayName = name || email;
+        const message = `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`;
 
-          if (!alreadyNotified) {
-            const displayName = name || email;
-            await tx.alert.createMany({
-              data: admins.map((admin) => ({
-                type: "GENERAL" as const,
-                message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
-                userId: admin.id,
-              })),
-            });
-          }
+        // الـ uid فريد بطبيعته فلا حاجة لقيد الوقت
+        const alreadyNotified = await prisma.alert.findFirst({
+          where: {
+            type: "GENERAL",
+            message: { contains: `[uid:${data.id}]` },
+          },
+          select: { id: true },
         });
+
+        if (!alreadyNotified) {
+          await prisma.alert.createMany({
+            data: admins.map((admin) => ({
+              type: "GENERAL" as const,
+              message,
+              userId: admin.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
       }
     }
   }
