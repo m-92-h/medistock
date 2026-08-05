@@ -59,13 +59,18 @@ export async function POST(req: Request) {
 
     const name = [data.first_name, data.last_name].filter(Boolean).join(" ") || null;
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id: data.id },
+      select: { id: true },
+    });
+
     await prisma.user.upsert({
       where: { id: data.id },
       create: { id: data.id, email, name, role },
       update: { email, name, role },
     });
 
-    // ── ربط المورد بحسابه ────────────────────────────────────────────────
+    // ── Link supplier to user account ──────────────────────────────────────
     if (role === "supplier") {
       const supplierRecord = await prisma.supplier.findUnique({
         where: { email },
@@ -79,36 +84,34 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── إشعار الأدمن عند قبول الدعوة (user.created فقط) ──────────────────
-    if (type === "user.created") {
+    // ── Notify admins on new registration only ─────────────────────────────
+    if (type === "user.created" && !existingUser) {
       const admins = await prisma.user.findMany({
         where: { role: "admin" },
         select: { id: true },
       });
 
       if (admins.length > 0) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-        const alreadyNotified = await prisma.alert.findFirst({
-          where: {
-            type: "GENERAL",
-            userId: admins[0].id,
-            message: { contains: data.id },
-            createdAt: { gte: fiveMinutesAgo },
-          },
-          select: { id: true },
-        });
-
-        if (!alreadyNotified) {
-          const displayName = name || email;
-          await prisma.alert.createMany({
-            data: admins.map((admin) => ({
-              type: "GENERAL" as const,
-              message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
-              userId: admin.id,
-            })),
+        await prisma.$transaction(async (tx) => {
+          const alreadyNotified = await tx.alert.findFirst({
+            where: {
+              type: "GENERAL",
+              message: { contains: `[uid:${data.id}]` },
+            },
+            select: { id: true },
           });
-        }
+
+          if (!alreadyNotified) {
+            const displayName = name || email;
+            await tx.alert.createMany({
+              data: admins.map((admin) => ({
+                type: "GENERAL" as const,
+                message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
+                userId: admin.id,
+              })),
+            });
+          }
+        });
       }
     }
   }
