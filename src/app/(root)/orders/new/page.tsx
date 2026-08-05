@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShoppingBag, Plus, Trash2, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
+import { ShoppingBag, Plus, Trash2, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,36 +47,33 @@ export default function NewOrderPage() {
   // Load Suppliers & Products
   useEffect(() => {
     async function initData() {
-  try {
-    const [supRes, prodRes] = await Promise.all([
-      fetch("/api/suppliers?minimal"),
-      fetch("/api/products?limit=100"),
-    ]);
+      try {
+        const [supRes, prodRes] = await Promise.all([fetch("/api/suppliers?minimal"), fetch("/api/products?limit=100")]);
 
-    if (supRes.ok) {
-      const supData = await supRes.json();
-      // supData قد يكون array مباشرة أو { suppliers: [] }
-      setSuppliers(Array.isArray(supData) ? supData : supData.suppliers || []);
-    } else {
-      console.error("Suppliers fetch failed:", supRes.status);
-      setSuppliers([]);
-    }
+        if (supRes.ok) {
+          const supData = await supRes.json();
+          // supData قد يكون array مباشرة أو { suppliers: [] }
+          setSuppliers(Array.isArray(supData) ? supData : supData.suppliers || []);
+        } else {
+          console.error("Suppliers fetch failed:", supRes.status);
+          setSuppliers([]);
+        }
 
-    if (prodRes.ok) {
-      const prodData = await prodRes.json();
-      setProducts(Array.isArray(prodData) ? prodData : prodData.products || []);
-    } else {
-      console.error("Products fetch failed:", prodRes.status);
-      setProducts([]);
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          setProducts(Array.isArray(prodData) ? prodData : prodData.products || []);
+        } else {
+          console.error("Products fetch failed:", prodRes.status);
+          setProducts([]);
+        }
+      } catch (err) {
+        console.error("Error loading dependencies:", err);
+        setSuppliers([]);
+        setProducts([]);
+      } finally {
+        setLoadingData(false);
+      }
     }
-  } catch (err) {
-    console.error("Error loading dependencies:", err);
-    setSuppliers([]);
-    setProducts([]);
-  } finally {
-    setLoadingData(false);
-  }
-}
 
     initData();
   }, []);
@@ -90,19 +87,17 @@ export default function NewOrderPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
- 
-
-const handleProductSelect = (index: number, productId: string | null) => {
-  const actualId = productId ?? "";
-  const matchedProduct = products.find((p) => p.id === actualId);
-  const updated = [...items];
-  updated[index] = {
-    ...updated[index],
-    productId: actualId,
-    unitPrice: matchedProduct ? Number(matchedProduct.price) : 0, 
+  const handleProductSelect = (index: number, productId: string | null) => {
+    const actualId = productId ?? "";
+    const matchedProduct = products.find((p) => p.id === actualId);
+    const updated = [...items];
+    updated[index] = {
+      ...updated[index],
+      productId: actualId,
+      unitPrice: matchedProduct ? Number(matchedProduct.price) : 0,
+    };
+    setItems(updated);
   };
-  setItems(updated);
-};
 
   const handleRowChange = (index: number, field: "quantity" | "unitPrice", value: number) => {
     const updated = [...items];
@@ -148,8 +143,12 @@ const handleProductSelect = (index: number, productId: string | null) => {
       }
 
       router.push(`/orders/${data.order.id}`);
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("An unexpected error occurred while creating the order");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -259,14 +258,7 @@ const handleProductSelect = (index: number, productId: string | null) => {
                     </div>
 
                     {/* Remove Row */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => handleRemoveItemRow(idx)}
-                      disabled={items.length <= 1}
-                    >
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0" onClick={() => handleRemoveItemRow(idx)} disabled={items.length <= 1}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>

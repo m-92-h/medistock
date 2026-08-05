@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Bell, AlertTriangle, Info, Package, Plus, Trash2, Check, Filter, RefreshCw, Loader2, Clock, Send, ChevronLeft, ChevronRight, CheckCheck, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,8 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAlerts } from "@/components/providers/alerts-context";
 import { useAuth } from "@clerk/nextjs";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AlertItem {
   id: string;
@@ -35,8 +32,6 @@ interface UserOption {
 }
 
 const ITEMS_PER_PAGE = 10;
-
-// ─── Icon & Badge helpers ─────────────────────────────────────────────────────
 
 function AlertIcon({ type }: { type: string }) {
   switch (type) {
@@ -77,8 +72,6 @@ function formatTime(iso: string) {
   });
 }
 
-// ─── Send Alert Dialog (Admin only) ──────────────────────────────────────────
-
 function SendAlertDialog({ onSent }: { onSent: () => void }) {
   const [open, setOpen] = useState(false);
   const [targetMode, setTargetMode] = useState<"user" | "role" | "all">("user");
@@ -91,15 +84,28 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // جلب المستخدمين عند فتح الحوار
   useEffect(() => {
     if (!open) return;
-    setLoadingUsers(true);
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((d) => setUsers(d.users ?? []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoadingUsers(false));
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        if (isMounted) setUsers(data.users ?? []);
+      } catch {
+        if (isMounted) setUsers([]);
+      } finally {
+        if (isMounted) setLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
   }, [open]);
 
   const resetForm = () => {
@@ -125,14 +131,13 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
     setError(null);
 
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, string> = {
         type,
         message: message.trim(),
       };
 
       if (targetMode === "user") payload.userId = selectedUserId;
       if (targetMode === "role") payload.targetRole = selectedRole;
-      // targetMode === "all" → لا userId ولا targetRole → global
 
       const res = await fetch("/api/alerts", {
         method: "POST",
@@ -149,14 +154,17 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
       setOpen(false);
       resetForm();
       onSent();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setSending(false);
     }
   };
 
-  // المستخدمون غير الأدمن فقط
   const filteredUsers = users.filter((u) => u.role !== "admin");
 
   return (
@@ -182,7 +190,6 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
         <div className="space-y-4 py-1">
           {error && <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md border border-destructive/20">{error}</p>}
 
-          {/* Target mode buttons */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">Send to</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -200,7 +207,6 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
             </div>
           </div>
 
-          {/* Specific user picker */}
           {targetMode === "user" && (
             <div className="space-y-2">
               <Label htmlFor="recipient" className="text-xs font-medium">
@@ -236,7 +242,6 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
             </div>
           )}
 
-          {/* Role picker */}
           {targetMode === "role" && (
             <div className="space-y-2">
               <Label htmlFor="roleSelect" className="text-xs font-medium">
@@ -263,10 +268,8 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
             </div>
           )}
 
-          {/* All staff note */}
           {targetMode === "all" && <p className="text-[11px] text-muted-foreground bg-muted/50 rounded-md px-3 py-2 border border-border">This alert will be visible to all employees and admins as a global notification.</p>}
 
-          {/* Type */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="alertType" className="text-xs font-medium">
@@ -286,7 +289,6 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
             </div>
           </div>
 
-          {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="alertMessage" className="text-xs font-medium">
               Message
@@ -318,8 +320,7 @@ function SendAlertDialog({ onSent }: { onSent: () => void }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
+// Main Page
 export default function AlertsPage() {
   const { refresh: refreshContext } = useAlerts();
   const { sessionClaims } = useAuth();
@@ -341,7 +342,6 @@ export default function AlertsPage() {
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchAlerts = useCallback(
     async (targetPage: number) => {
       setLoading(true);
@@ -369,17 +369,12 @@ export default function AlertsPage() {
     [readFilter, typeFilter],
   );
 
-  // إعادة تعيين الصفحة عند تغيير الفلتر
   useEffect(() => {
-    setPage(1);
-  }, [readFilter, typeFilter]);
-
-  useEffect(() => {
+    
     fetchAlerts(page);
   }, [page, fetchAlerts]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
+  // Actions
   const handleMarkAsRead = async (id: string) => {
     setActionId(id);
     try {
@@ -399,7 +394,6 @@ export default function AlertsPage() {
       const res = await fetch(`/api/alerts/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Alert deleted.");
-        // إذا كانت الصفحة الحالية ستصبح فارغة بعد الحذف → ارجع للصفحة السابقة
         const newTotal = total - 1;
         const newTotalPages = Math.max(1, Math.ceil(newTotal / ITEMS_PER_PAGE));
         const targetPage = page > newTotalPages ? newTotalPages : page;
@@ -444,7 +438,7 @@ export default function AlertsPage() {
 
   const hasUnread = alerts.some((a) => !a.isRead);
 
-  // ── Pagination numbers helper ──────────────────────────────────────────────
+  // Pagination numbers helper 
   function getPageNumbers(): number[] {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
     if (page <= 3) return [1, 2, 3, 4, 5];
@@ -452,10 +446,8 @@ export default function AlertsPage() {
     return [page - 2, page - 1, page, page + 1, page + 2];
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2.5">
@@ -492,7 +484,13 @@ export default function AlertsPage() {
         {/* Filters */}
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <Select value={readFilter} onValueChange={(val) => setReadFilter(val ?? "all")}>
+          <Select
+            value={readFilter}
+            onValueChange={(val) => {
+              setReadFilter(val ?? "all");
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="h-8 w-32 text-xs">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -503,7 +501,13 @@ export default function AlertsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val ?? "all")}>
+          <Select
+            value={typeFilter}
+            onValueChange={(val) => {
+              setTypeFilter(val ?? "all");
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="h-8 w-32 text-xs">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -537,7 +541,7 @@ export default function AlertsPage() {
 
       {/* Alerts List */}
       <Card className="overflow-hidden">
-        <CardHeader className="px-5 py-3 border-b bg-muted/30">
+        <CardHeader className="px-5 py-3 border-b ">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold">Activity Feed</CardTitle>
             <span className="text-xs text-muted-foreground">

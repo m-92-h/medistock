@@ -61,7 +61,6 @@ export default function NewProductPage() {
     e.preventDefault();
     setError(null);
 
-    // FIX: client-side validation للـ selects قبل إرسال الطلب
     if (!form.categoryId) {
       setError("Please select a category before saving.");
       return;
@@ -71,7 +70,6 @@ export default function NewProductPage() {
       return;
     }
 
-    // FIX: validation للـ price على مستوى الـ client
     const parsedPrice = Number(form.price);
     if (!form.price || isNaN(parsedPrice) || parsedPrice < 0) {
       setError("Please enter a valid price (must be 0 or greater).");
@@ -169,7 +167,6 @@ export default function NewProductPage() {
                     value={form.categoryId}
                     onValueChange={(val) => {
                       setForm({ ...form, categoryId: val ?? "" });
-                      // FIX: مسح رسالة الخطأ عند الاختيار
                       if (error?.includes("category")) setError(null);
                     }}
                   >
@@ -194,7 +191,6 @@ export default function NewProductPage() {
                     value={form.supplierId}
                     onValueChange={(val) => {
                       setForm({ ...form, supplierId: val ?? "" });
-                      // FIX: مسح رسالة الخطأ عند الاختيار
                       if (error?.includes("supplier")) setError(null);
                     }}
                   >

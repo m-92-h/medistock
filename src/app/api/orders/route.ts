@@ -2,10 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-function serializeOrder(order: any) {
+interface OrderItemInput {
+  unitPrice: number | string | { toString(): string };
+  quantity: number | string | { toString(): string };
+  [key: string]: unknown;
+}
+
+interface OrderInput {
+  items?: OrderItemInput[];
+  [key: string]: unknown;
+}
+
+function serializeOrder<T extends OrderInput>(order: T) {
   return {
     ...order,
-    items: order.items?.map((item: any) => ({
+    items: order.items?.map((item: OrderItemInput) => ({
       ...item,
       unitPrice: Number(item.unitPrice),
       quantity: Number(item.quantity),
@@ -126,7 +137,6 @@ export async function POST(req: NextRequest) {
   const orderRef = order.id.slice(-8).toUpperCase();
   const creatorName = user.name || user.email;
 
-  // ── إشعار المورد إذا كان لديه حساب مرتبط ──────────────────────────────
   if (supplier.userId) {
     await prisma.alert.create({
       data: {
@@ -137,7 +147,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── إشعار الأدمن بالطلب الجديد (فقط إذا لم يكن المنشئ أدمناً) ─────────
   if (user.role !== "admin") {
     const admins = await prisma.user.findMany({
       where: { role: "admin" },

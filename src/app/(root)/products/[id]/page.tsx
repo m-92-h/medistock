@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StockMovement {
@@ -143,7 +143,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-semibold text-foreground">"{product.name}"</span>? This action cannot be undone and will remove all associated stock movements.
+              Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{product.name}&quot;</span>? This action cannot be undone and will remove all associated stock movements.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

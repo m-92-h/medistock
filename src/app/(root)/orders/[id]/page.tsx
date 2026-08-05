@@ -1,10 +1,10 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import Link from "next/link";
-import { ShoppingBag, ArrowLeft, Loader2, CheckCircle2, XCircle, Truck, PackageCheck, Building2, User, Clock, AlertCircle, FileText } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, Loader2, CheckCircle2, XCircle, Truck, PackageCheck, Building2, User, AlertCircle, FileText } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -51,7 +51,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
   const [updating, setUpdating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchOrderDetail = async () => {
+  const fetchOrderDetail = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/orders/${id}`);
@@ -67,11 +67,11 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchOrderDetail();
-  }, [id]);
+  }, [fetchOrderDetail]);
 
   const handleStatusUpdate = async (targetStatus: string) => {
     setUpdating(true);
@@ -91,17 +91,21 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
       }
 
       setOrder(data.order);
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("An error occurred while updating the order status");
+      }
     } finally {
       setUpdating(false);
     }
   };
 
   const calculateTotal = () => {
-  if (!order?.items) return 0;
-  return order.items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
-};
+    if (!order?.items) return 0;
+    return order.items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
+  };
 
   if (loading) {
     return (
@@ -237,7 +241,8 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                     {item.quantity} {item.product.unit || "units"}
                   </TableCell>
                   <TableCell className="text-right">${Number(item.unitPrice).toFixed(2)}</TableCell>
-<TableCell className="text-right font-bold">${(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}</TableCell>                </TableRow>
+                  <TableCell className="text-right font-bold">${(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}</TableCell>{" "}
+                </TableRow>
               ))}
             </TableBody>
           </Table>

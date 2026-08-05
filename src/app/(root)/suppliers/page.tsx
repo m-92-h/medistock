@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Building2, Trash2, Pencil, Loader2, Mail, Phone, Package, ShoppingBag, UserCheck } from "lucide-react";
+import { Plus, Search, Building2, Trash2, Pencil, Loader2, Mail, Phone, Package, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

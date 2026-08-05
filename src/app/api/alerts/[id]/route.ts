@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 type Params = { params: Promise<{ id: string }> };
 
 // PATCH /api/alerts/[id]  — mark as read
-export async function PATCH(_req: NextRequest, { params }: Params) {
+export async function PATCH(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.role === "supplier") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -30,7 +30,7 @@ export async function PATCH(_req: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/alerts/[id]  (Admin only)
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });

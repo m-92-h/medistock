@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
+interface OrderItemInput {
+  unitPrice: number | string | { toString(): string };
+  quantity: number | string | { toString(): string };
+  [key: string]: unknown;
+}
+
+interface OrderInput {
+  items?: OrderItemInput[];
+  [key: string]: unknown;
+}
+
 type Params = { params: Promise<{ id: string }> };
 
-function serializeOrder(order: any) {
+function serializeOrder<T extends OrderInput>(order: T) {
   return {
     ...order,
-    items: order.items?.map((item: any) => ({
+    items: order.items?.map((item: OrderItemInput) => ({
       ...item,
       unitPrice: Number(item.unitPrice),
       quantity: Number(item.quantity),
@@ -16,7 +27,7 @@ function serializeOrder(order: any) {
 }
 
 // GET /api/orders/[id]
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -152,10 +163,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const supplierName = order.supplier.name;
     const recipientIds = new Set<string>();
 
-    // منشئ الطلب دائماً
     recipientIds.add(order.createdById);
 
-    // كل الأدمن — يضاف فقط من ليس منشئ الطلب (تجنب التكرار)
     const admins = await prisma.user.findMany({
       where: { role: "admin" },
       select: { id: true },
@@ -208,12 +217,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     });
 
     // ── فحص Low Stock بعد تحديث الكميات ────────────────────────────────
-    // (نادر لكن ممكن إذا كانت الكمية المضافة أقل من الحد الأدنى)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     for (const product of updatedProducts) {
       if (product.quantity <= product.minQuantity) {
-        // تجنب التنبيه المكرر خلال 24 ساعة
         const recentAlert = await prisma.alert.findFirst({
           where: {
             productId: product.id,
@@ -230,7 +237,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
               type: "LOW_STOCK",
               message: `Low stock after delivery: "${product.name}" has ${product.quantity} units remaining (min: ${product.minQuantity}).`,
               productId: product.id,
-              // userId: null → global (يراه الأدمن + الموظف)
             },
           });
         }

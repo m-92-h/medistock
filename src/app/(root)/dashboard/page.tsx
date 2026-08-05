@@ -9,9 +9,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
-  // ─────────────────────────────────────────────────────────────
   // ADMIN
-  // ─────────────────────────────────────────────────────────────
   if (user.role === "admin") {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -134,9 +132,9 @@ export default async function DashboardPage() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
+  
   // EMPLOYEE
-  // ─────────────────────────────────────────────────────────────
+  
   if (user.role === "employee") {
     const now = new Date();
 
@@ -268,9 +266,9 @@ export default async function DashboardPage() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
+  
   // SUPPLIER
-  // ─────────────────────────────────────────────────────────────
+  
   const supplierRecord = await prisma.supplier.findUnique({
     where: { userId: user.id },
   });

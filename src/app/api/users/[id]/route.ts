@@ -90,19 +90,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
 
       resolvedEmail = newEmail;
-    } catch (err: any) {
-      const message = err?.errors?.[0]?.longMessage ?? err?.message ?? "Failed to update email in Clerk";
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
+    } catch (err: unknown) {
+  const clerkError = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+  const message = clerkError?.errors?.[0]?.longMessage ?? clerkError?.message ?? "Failed to update email in Clerk";
+  return NextResponse.json({ error: message }, { status: 500 });
+}
   }
 
   // ── Update Clerk user (name + primaryEmailAddressID if set) ───────────────
   try {
     await clerk.users.updateUser(id, clerkUserUpdate);
-  } catch (err: any) {
-    const message = err?.errors?.[0]?.longMessage ?? err?.message ?? "Failed to update user in Clerk";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  } catch (err: unknown) {
+  const clerkError = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+  const message = clerkError?.errors?.[0]?.longMessage ?? clerkError?.message ?? "Failed to update user in Clerk";
+  return NextResponse.json({ error: message }, { status: 500 });
+}
 
   // ── Sync role to Clerk public metadata if changed ─────────────────────────
   if (role !== undefined) {

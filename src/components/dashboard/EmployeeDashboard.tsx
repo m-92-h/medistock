@@ -136,7 +136,7 @@ export function EmployeeDashboard({ user, todayMovements, alerts, pendingOrders,
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 cursor-pointer" render={<Link href="/stock/inventory" />}>
+          <Button variant="outline" size="sm" className="gap-2 cursor-pointer" render={<Link href="/stock/movements" />}>
             <Package className="h-4 w-4" />
             Quick Audit
           </Button>
@@ -180,7 +180,6 @@ export function EmployeeDashboard({ user, todayMovements, alerts, pendingOrders,
               <span className="text-3xl font-bold tabular-nums tracking-tight">{todayOUT}</span>
               <span className="text-xs text-muted-foreground">units</span>
             </div>
-            {/* للـ OUT: الزيادة ليست بالضرورة سيئة، نتركها محايدة */}
             <ChangeBadge pct={outChangePct} positiveIsGood={true} />
           </CardContent>
         </Card>
@@ -215,7 +214,6 @@ export function EmployeeDashboard({ user, todayMovements, alerts, pendingOrders,
               <span className="text-3xl font-bold tabular-nums tracking-tight">{alerts.length}</span>
               <span className="text-xs text-muted-foreground">notifications</span>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{alerts.length > 0 ? "Items near low stock" : "Stock status normal"}</p>
           </CardContent>
         </Card>
       </div>
@@ -228,7 +226,7 @@ export function EmployeeDashboard({ user, todayMovements, alerts, pendingOrders,
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <BarChart2 className="h-4 w-4 text-primary" />
-                Today's Stock Activity Flow
+                Today&apos;s Stock Activity Flow
               </CardTitle>
               <CardDescription className="text-xs">Real-time comparison between incoming and outgoing stock</CardDescription>
             </div>
@@ -285,7 +283,7 @@ export function EmployeeDashboard({ user, todayMovements, alerts, pendingOrders,
           </CardContent>
         </Card>
 
-        {/* Storage Capacity — بيانات حقيقية من DB */}
+        {/* Storage Capacity */}
         <Card className="flex flex-col justify-between">
           <CardHeader>
             <CardTitle className="text-base font-bold">Storage Capacity</CardTitle>

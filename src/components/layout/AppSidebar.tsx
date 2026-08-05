@@ -1,10 +1,5 @@
 "use client";
 
-// المسار: src/components/layout/AppSidebar.tsx
-// استبدل الملف الحالي بهذا الكامل
-// التغيير: حذف useEffect المستقل لجلب عدد التنبيهات
-//           واستبداله بـ useAlerts() من Context المشترك
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -67,7 +62,7 @@ const navGroups: { label: string; roles: Role[]; items: NavItem[] }[] = [
         href: "/alerts",
         icon: Bell,
         roles: ["admin", "employee"],
-        showAlertBadge: true, // ← هذا العنصر فقط يُظهر badge التنبيهات
+        showAlertBadge: true,
       },
     ],
   },
@@ -112,7 +107,6 @@ export function AppSidebar() {
   const { sessionClaims } = useAuth();
   const role = (sessionClaims?.metadata as { role?: string })?.role as Role | undefined;
 
-  // ← عدد التنبيهات من Context المشترك مع Navbar (لا fetch مستقل هنا)
   const { unreadCount } = useAlerts();
 
   const visibleGroups = navGroups

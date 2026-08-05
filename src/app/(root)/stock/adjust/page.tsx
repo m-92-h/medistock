@@ -3,38 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Package,
-  PlusCircle,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  ArrowLeft,
-  FileText,
-  Boxes,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { PlusCircle, Loader2, CheckCircle2, AlertCircle, ArrowLeft, FileText, Boxes, TrendingUp, TrendingDown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProductOption {
   id: string;
@@ -65,11 +39,7 @@ export default function StockAdjustPage() {
 
   // Projected Quantity Calculation
   const numQty = typeof quantity === "number" ? quantity : 0;
-  const projectedStock = selectedProduct
-    ? type === "IN"
-      ? selectedProduct.quantity + numQty
-      : selectedProduct.quantity - numQty
-    : 0;
+  const projectedStock = selectedProduct ? (type === "IN" ? selectedProduct.quantity + numQty : selectedProduct.quantity - numQty) : 0;
 
   // Fetch Products for Dropdown
   useEffect(() => {
@@ -115,17 +85,19 @@ export default function StockAdjustPage() {
         throw new Error(data.error || "Failed to record stock movement");
       }
 
-      setSuccessMsg(
-        `Movement recorded successfully! (${type} ${quantity} units)`
-      );
+      setSuccessMsg(`Movement recorded successfully! (${type} ${quantity} units)`);
       setQuantity("");
       setNote("");
 
       setTimeout(() => {
         router.push("/stock/movements");
       }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("An unexpected error occurred");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -153,12 +125,8 @@ export default function StockAdjustPage() {
                 <PlusCircle className="w-6 h-6" />
               </div>
               <div>
-                <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                  Record Stock Movement
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Register inbound inventory receipt (IN) or dispatch stock out (OUT).
-                </CardDescription>
+                <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">Record Stock Movement</CardTitle>
+                <CardDescription className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Register inbound inventory receipt (IN) or dispatch stock out (OUT).</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -190,36 +158,18 @@ export default function StockAdjustPage() {
                     <Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading inventory products...
                   </div>
                 ) : (
-                  <Select
-                    value={selectedProductId}
-                    onValueChange={(val) => setSelectedProductId(val ?? "")}
-                  >
-                    <SelectTrigger
-                      id="product"
-                      className="h-12 border-slate-200 dark:border-slate-800 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 text-start cursor-pointer transition-all"
-                    >
+                  <Select value={selectedProductId} onValueChange={(val) => setSelectedProductId(val ?? "")}>
+                    <SelectTrigger id="product" className="h-12 border-slate-200 dark:border-slate-800 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 text-start cursor-pointer transition-all">
                       <SelectValue placeholder="Choose a product from inventory..." />
                     </SelectTrigger>
 
-                    <SelectContent
-                      align="start"
-                      sideOffset={6}
-                      className="w-[var(--radix-select-trigger-width)] max-h-64 p-1.5 shadow-2xl border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900"
-                    >
+                    <SelectContent align="start" sideOffset={6} className="w-[var(--radix-select-trigger-width)] max-h-64 p-1.5 shadow-2xl border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
                       {products.map((p) => (
-                        <SelectItem
-                          key={p.id}
-                          value={p.id}
-                          className="cursor-pointer py-3 px-3 focus:bg-slate-100 dark:focus:bg-slate-800 rounded-lg my-0.5 transition-colors"
-                        >
+                        <SelectItem key={p.id} value={p.id} className="cursor-pointer py-3 px-3 focus:bg-slate-100 dark:focus:bg-slate-800 rounded-lg my-0.5 transition-colors">
                           <div className="flex items-center justify-between gap-3 w-full">
                             <div className="flex flex-col min-w-0 pr-2">
-                              <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
-                                {p.name}
-                              </span>
-                              <span className="text-xs text-slate-400 font-mono mt-0.5">
-                                SKU: {p.sku}
-                              </span>
+                              <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{p.name}</span>
+                              <span className="text-xs text-slate-400 font-mono mt-0.5">SKU: {p.sku}</span>
                             </div>
                             <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0 border border-slate-200/60 dark:border-slate-700/60">
                               {p.quantity} {p.unit}
@@ -234,11 +184,11 @@ export default function StockAdjustPage() {
 
               {/* Selected Product Interactive Preview */}
               {selectedProduct && (
-                <div className={`p-4 rounded-xl border transition-all duration-300 ${
-                  type === "IN" 
-                    ? "bg-emerald-50/40 border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/40" 
-                    : "bg-rose-50/40 border-rose-200/80 dark:bg-rose-950/20 dark:border-rose-900/40"
-                }`}>
+                <div
+                  className={`p-4 rounded-xl border transition-all duration-300 ${
+                    type === "IN" ? "bg-emerald-50/40 border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/40" : "bg-rose-50/40 border-rose-200/80 dark:bg-rose-950/20 dark:border-rose-900/40"
+                  }`}
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${type === "IN" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"}`}>
@@ -291,16 +241,15 @@ export default function StockAdjustPage() {
                     onClick={() => setType("IN")}
                   >
                     <TrendingUp className="w-4 h-4" />
-                    <span>Stock IN </span><span className="hidden sm:flex">(Receipt)</span>
+                    <span>Stock IN </span>
+                    <span className="hidden sm:flex">(Receipt)</span>
                   </Button>
 
                   <Button
                     type="button"
                     variant="ghost"
                     className={`h-11 rounded-lg gap-2 text-sm font-semibold transition-all ${
-                      type === "OUT"
-                        ? "bg-rose-600 text-white shadow-md shadow-rose-600/20 hover:bg-rose-700"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+                      type === "OUT" ? "bg-rose-600 text-white shadow-md shadow-rose-600/20 hover:bg-rose-700" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                     }`}
                     onClick={() => setType("OUT")}
                   >
@@ -322,9 +271,7 @@ export default function StockAdjustPage() {
                   placeholder="e.g. 50"
                   className="h-12 rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 text-base"
                   value={quantity}
-                  onChange={(e) =>
-                    setQuantity(e.target.value === "" ? "" : Number(e.target.value))
-                  }
+                  onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
                   required
                 />
               </div>
@@ -348,11 +295,7 @@ export default function StockAdjustPage() {
             </CardContent>
 
             <CardFooter className="p-6 sm:p-8 pt-0">
-              <Button
-                type="submit"
-                disabled={submitting || !selectedProductId || !quantity}
-                className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all cursor-pointer"
-              >
+              <Button type="submit" disabled={submitting || !selectedProductId || !quantity} className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all cursor-pointer">
                 {submitting ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />

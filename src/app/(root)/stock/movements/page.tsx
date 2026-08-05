@@ -3,45 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  History,
-  PlusCircle,
-  RefreshCw,
-  Filter,
-  Loader2,
-  Package,
-  User,
-  FileText,
-  Trash2,
-  Calendar,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, History, PlusCircle, RefreshCw, Filter, Loader2, Package, User, FileText, Trash2, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface StockMovement {
   id: string;
@@ -142,7 +112,7 @@ export default function StockMovementsPage() {
         setLoading(false);
       }
     },
-    [typeFilter]
+    [typeFilter],
   );
 
   const handlePageChange = (newPage: number) => {
@@ -203,9 +173,7 @@ export default function StockMovementsPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
             <History className="w-8 h-8 text-primary" /> Stock Movements
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Audit log of all inbound (IN) and outbound (OUT) inventory transactions.
-          </p>
+          <p className="text-muted-foreground text-sm mt-1">Audit log of all inbound (IN) and outbound (OUT) inventory transactions.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -248,9 +216,7 @@ export default function StockMovementsPage() {
       <Card className="shadow-sm border-border overflow-hidden">
         <CardHeader className="p-4 sm:p-5 border-b">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold tracking-wide">
-              Transaction History
-            </CardTitle>
+            <CardTitle className="text-base font-semibold tracking-wide">Transaction History</CardTitle>
             <Badge variant="secondary" className="font-mono text-xs px-2.5 py-0.5">
               Total: {pagination.total}
             </Badge>
@@ -272,9 +238,7 @@ export default function StockMovementsPage() {
                 <History className="w-8 h-8 opacity-40" />
               </div>
               <p className="font-semibold text-foreground text-sm">No stock movements recorded</p>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                There are no transaction records matching your selected filter.
-              </p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">There are no transaction records matching your selected filter.</p>
             </div>
           ) : (
             <>
@@ -312,19 +276,11 @@ export default function StockMovementsPage() {
                             <Package className="w-4 h-4 text-muted-foreground shrink-0" />
                             <span className="truncate max-w-[180px]">{mov.product.name}</span>
                           </div>
-                          <div className="text-xs font-mono text-muted-foreground pl-6">
-                            SKU: {mov.product.sku}
-                          </div>
+                          <div className="text-xs font-mono text-muted-foreground pl-6">SKU: {mov.product.sku}</div>
                         </TableCell>
 
                         <TableCell className="align-middle font-bold text-sm">
-                          <span
-                            className={
-                              mov.type === "IN"
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-rose-600 dark:text-rose-400"
-                            }
-                          >
+                          <span className={mov.type === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
                             {mov.type === "IN" ? "+" : "-"}
                             {mov.quantity} {mov.product.unit || "units"}
                           </span>
@@ -339,10 +295,7 @@ export default function StockMovementsPage() {
 
                         <TableCell className="align-middle max-w-[220px]">
                           {mov.note ? (
-                            <span
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground truncate"
-                              title={mov.note}
-                            >
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground truncate" title={mov.note}>
                               <FileText className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
                               <span className="truncate">{mov.note}</span>
                             </span>
@@ -371,11 +324,7 @@ export default function StockMovementsPage() {
                             title="Delete Movement"
                             aria-label="Delete Movement"
                           >
-                            {deletingId === mov.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
+                            {deletingId === mov.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -416,24 +365,14 @@ export default function StockMovementsPage() {
                         disabled={deletingId === mov.id}
                         aria-label="Delete Movement"
                       >
-                        {deletingId === mov.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
+                        {deletingId === mov.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </Button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 pt-1 text-xs bg-muted/40 p-2.5 rounded-lg">
                       <div>
                         <span className="text-muted-foreground block text-[10px] uppercase font-semibold tracking-wider">Quantity</span>
-                        <span
-                          className={`font-bold text-sm ${
-                            mov.type === "IN"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-600 dark:text-rose-400"
-                          }`}
-                        >
+                        <span className={`font-bold text-sm ${mov.type === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                           {mov.type === "IN" ? "+" : "-"}
                           {mov.quantity} {mov.product.unit || "units"}
                         </span>
@@ -509,7 +448,7 @@ export default function StockMovementsPage() {
                         {item}
                       </PaginationLink>
                     </PaginationItem>
-                  )
+                  ),
                 )}
 
                 <PaginationItem>
@@ -534,16 +473,11 @@ export default function StockMovementsPage() {
         <AlertDialogContent className="max-w-md rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg font-semibold">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-muted-foreground">
-              This action cannot be undone. Deleting this movement record will automatically adjust the product stock quantity.
-            </AlertDialogDescription>
+            <AlertDialogDescription className="text-sm text-muted-foreground">This action cannot be undone. Deleting this movement record will automatically adjust the product stock quantity.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0 mt-2">
             <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-            >
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer">
               Delete Movement
             </AlertDialogAction>
           </AlertDialogFooter>

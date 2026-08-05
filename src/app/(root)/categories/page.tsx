@@ -81,8 +81,9 @@ export default function CategoriesPage() {
       setNewCategoryName("");
       setIsCreateOpen(false);
       fetchCategories();
-    } catch (err: any) {
-      setCreateError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create category";
+      setCreateError(message);
     } finally {
       setCreateLoading(false);
     }
@@ -115,8 +116,9 @@ export default function CategoriesPage() {
 
       setCategoryToEdit(null);
       fetchCategories();
-    } catch (err: any) {
-      setEditError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update category";
+      setEditError(message);
     } finally {
       setEditLoading(false);
     }
@@ -139,8 +141,9 @@ export default function CategoriesPage() {
 
       setCategoryToDelete(null);
       fetchCategories();
-    } catch (err: any) {
-      setDeleteError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete category";
+      setDeleteError(message);
     } finally {
       setDeleteLoading(false);
     }

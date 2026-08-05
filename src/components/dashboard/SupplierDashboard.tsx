@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface OrderItem {
   quantity: number;
-  unitPrice: number; // تم تحويله من Decimal في page.tsx
+  unitPrice: number;
   product: { name: string } | null;
 }
 
@@ -29,7 +29,7 @@ interface Props {
   supplier: { id: string; name: string } | null;
   recentOrders: Order[];
   ordersByStatus: Record<string, number>;
-  totalGross: number; // القيمة الإجمالية الحقيقية لجميع الطلبات من DB
+  totalGross: number;
 }
 
 // ─── Config & Helpers ────────────────────────────────────────────────────────
@@ -198,12 +198,12 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-amber-600 dark:text-amber-400">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div className="text-xs sm:text-sm">
-            <span className="font-semibold">Account Disconnected:</span> Your user profile isn't associated with an active supplier profile. Please contact system administrators.
+            <span className="font-semibold">Account Disconnected:</span> Your user profile isn&apos;t associated with an active supplier profile. Please contact system administrators.
           </div>
         </div>
       )}
 
-      {/* KPI Cards — جميعها من DB */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiStatCard title="Total Orders" value={totalOrders} subText="All-time purchase orders" icon={ShoppingCart} badgeText="Lifetime" badgeVariant="neutral" />
 
@@ -211,7 +211,7 @@ export function SupplierDashboard({ user, supplier, recentOrders, ordersByStatus
 
         <KpiStatCard title="In Transit" value={shippedCount} subText="Currently shipped orders" icon={Truck} badgeText="On the way" badgeVariant="purple" />
 
-        {/* totalGross يأتي من DB — قيمة جميع الطلبات التاريخية */}
+        {/* totalGross */}
         <KpiStatCard
           title="Total Gross Value"
           value={`$${totalGross.toLocaleString("en-US", {

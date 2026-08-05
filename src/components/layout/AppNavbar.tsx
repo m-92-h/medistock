@@ -1,12 +1,5 @@
 "use client";
 
-// المسار: src/components/layout/AppNavbar.tsx
-// استبدل الملف الحالي بهذا الكامل
-// التغييرات:
-//   - يستخدم useAlerts() من Context بدل fetch مستقل للعدد
-//   - يجلب قائمة التنبيهات عند فتح القائمة فقط (لا عند كل render)
-//   - أضفنا زر "View all" في footer القائمة
-
 import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { Bell, Loader2, Sun, Moon } from "lucide-react";
@@ -61,16 +54,15 @@ export function AppNavbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
-  // ← عدد التنبيهات من Context المشترك مع Sidebar
   const { unreadCount, markRead, markAllRead } = useAlerts();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // جلب آخر 10 تنبيهات عند فتح القائمة فقط
   useEffect(() => {
     if (!open) return;
+
     setLoadingList(true);
     fetch("/api/alerts?limit=10")
       .then((r) => r.json())

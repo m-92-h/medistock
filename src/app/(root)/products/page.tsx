@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Plus, Search, AlertTriangle, Package, Edit, Eye, Trash2, Boxes, DollarSign, BarChart3, PieChart as PieIcon, FilterX, ChevronLeft, ChevronRight, ShieldCheck, XCircle, Loader2 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
@@ -42,14 +43,6 @@ interface Stats {
   totalValue: number;
 }
 
-interface DeleteProductDialogProps {
-  open: boolean;
-  productName: string;
-  isDeleting: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
 const HEALTHY_COLOR = "var(--color-success)";
 const WARNING_COLOR = "var(--color-warning)";
 const DANGER_COLOR = "var(--color-destructive)";
@@ -70,14 +63,17 @@ export default function ProductsPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const loading = loadingOptions || loadingProducts;
+  const searchParams = useSearchParams();
+  const initialLowStock = searchParams.get("lowStock") === "true";
 
   // Filters
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("ALL");
   const [supplierId, setSupplierId] = useState("ALL");
-  const [lowStock, setLowStock] = useState(false);
+  const [lowStock, setLowStock] = useState(initialLowStock);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
 
   // fetch => [categories + suppliers]
   useEffect(() => {
@@ -136,31 +132,31 @@ export default function ProductsPage() {
 
   // Delete project
   const handleDelete = async () => {
-  if (!deleteTarget) return;
-  setDeletingId(deleteTarget.id);
-  try {
-    const res = await fetch(`/api/products/${deleteTarget.id}`, { method: "DELETE" });
-    if (res.ok) {
-      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-      toast.success("Product deleted", {
-        description: `"${deleteTarget.name}" has been permanently removed.`,
-      });
-      await fetchProducts();
-    } else {
-      const data = await res.json();
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      const res = await fetch(`/api/products/${deleteTarget.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+        toast.success("Product deleted", {
+          description: `"${deleteTarget.name}" has been permanently removed.`,
+        });
+        await fetchProducts();
+      } else {
+        const data = await res.json();
+        toast.error("Failed to delete product", {
+          description: data.error || "An unexpected error occurred.",
+        });
+      }
+    } catch {
       toast.error("Failed to delete product", {
-        description: data.error || "An unexpected error occurred.",
+        description: "An unexpected error occurred.",
       });
+    } finally {
+      setDeletingId(null);
+      setDeleteTarget(null);
     }
-  } catch {
-    toast.error("Failed to delete product", {
-      description: "An unexpected error occurred.",
-    });
-  } finally {
-    setDeletingId(null);
-    setDeleteTarget(null);
-  }
-};
+  };
 
   // ─── Chart Data ───────────────────────────────────────────────────────────
   const categoryChartData = useMemo(() => {
@@ -205,7 +201,7 @@ export default function ProductsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteTarget?.name}"</span>? This action cannot be undone.
+              Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{deleteTarget?.name}&quot;</span>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -463,7 +459,7 @@ export default function ProductsPage() {
       <Card className="border border-border/70 bg-card shadow-xs overflow-hidden">
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-muted/40">
+            <TableHeader>
               <TableRow>
                 <TableHead className="text-left py-3 px-4 font-semibold text-foreground text-xs uppercase tracking-wider">Product</TableHead>
                 <TableHead className="text-left py-3 px-4 font-semibold text-foreground text-xs uppercase tracking-wider">SKU</TableHead>

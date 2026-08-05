@@ -25,7 +25,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/alerts?limit=100&isRead=false");
       if (!res.ok) return;
       const data = await res.json();
-      // total يأتي من API الجديد، أو نحسبه من طول المصفوفة احتياطاً
       setUnreadCount(data.total ?? data.alerts?.length ?? 0);
     } catch {
       // silent
@@ -34,7 +33,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchCount();
-    // تحديث تلقائي كل 60 ثانية
     intervalRef.current = setInterval(fetchCount, 60_000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

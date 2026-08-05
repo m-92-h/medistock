@@ -38,8 +38,12 @@ export default function InvitePage() {
 
       setSuccessMsg(`Invitation successfully sent to ${data.invitation.email}`);
       setEmail("");
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("An unexpected error occurred.");
+      }
     } finally {
       setLoading(false);
     }

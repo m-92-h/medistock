@@ -1,9 +1,5 @@
-// المسار: src/app/api/alerts/route.ts
-// استبدل الملف الحالي بهذا الكامل
-// التغييرات: أضفنا pagination (page, skip, totalPages, total)
-//             وأضفنا دعم إرسال لـ targetRole (دور كامل)
-
 import { NextRequest, NextResponse } from "next/server";
+import { AlertType, Role } from "../../generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -14,22 +10,22 @@ export async function GET(req: NextRequest) {
   if (user.role === "supplier") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = req.nextUrl;
-  const page  = Math.max(1, Number(searchParams.get("page")  ?? "1"));
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "10")));
-  const skip  = (page - 1) * limit;
+  const skip = (page - 1) * limit;
   const isRead = searchParams.get("isRead");
-  const type   = searchParams.get("type");
+  const type = searchParams.get("type");
 
   const where =
     user.role === "admin"
       ? {
           ...(isRead !== null && { isRead: isRead === "true" }),
-          ...(type && { type: type as any }),
+          ...(type && { type: type as AlertType }),
         }
       : {
           OR: [{ userId: user.id }, { userId: null }],
           ...(isRead !== null && { isRead: isRead === "true" }),
-          ...(type && { type: type as any }),
+          ...(type && { type: type as AlertType }),
         };
 
   const [alerts, total] = await Promise.all([
@@ -67,10 +63,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields: type, message" }, { status: 400 });
   }
 
-  // إرسال لكل أعضاء دور معين
   if (targetRole && !userId) {
     const targets = await prisma.user.findMany({
-      where:  { role: targetRole as any },
+      where: { role: targetRole as Role },
       select: { id: true },
     });
 
@@ -82,13 +77,13 @@ export async function POST(req: NextRequest) {
       targets.map((t) =>
         prisma.alert.create({
           data: {
-            type,
+            type: type as AlertType,
             message,
             productId: productId ?? null,
             userId: t.id,
           },
-        })
-      )
+        }),
+      ),
     );
 
     return NextResponse.json({ alerts, count: alerts.length }, { status: 201 });
@@ -97,7 +92,7 @@ export async function POST(req: NextRequest) {
   // تنبيه لمستخدم واحد أو global (userId = null)
   const alert = await prisma.alert.create({
     data: {
-      type,
+      type: type as AlertType,
       message,
       productId: productId ?? null,
       userId: userId ?? null,

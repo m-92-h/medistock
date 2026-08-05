@@ -144,7 +144,6 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
   const gradientId = `kpi-grad-${rawId.replace(/:/g, "")}`;
   const chartData = sparklineData?.map((val, i) => ({ id: i, val })) ?? [];
 
-  // إعدادات البصريات حسب الحالة (Themes & Color Accents)
   const variants = {
     increase: {
       badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
@@ -184,12 +183,9 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring p-5 min-h-[156px]",
       )}
     >
-      {/* 1. Ambient Background Glow on Hover */}
       <div className={cn("absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100 pointer-events-none", currentVariant.glow)} />
 
-      {/* 2. Top Header: Title & Styled Icon Box */}
       <div className="flex items-center justify-between gap-3 z-10 w-full">
-        {/* Left Section: Icon & Title */}
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-xs transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm", currentVariant.iconBg)}>
             <Icon className="h-4 w-4 transition-transform duration-300 group-hover:rotate-[-6deg]" />
@@ -198,7 +194,6 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
           <span className="truncate text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors duration-300 group-hover:text-foreground">{title}</span>
         </div>
 
-        {/* Right Section: Action Link / Arrow */}
         {href && (
           <div className="flex shrink-0 items-center justify-center rounded-lg p-1 text-muted-foreground transition-all duration-300 group-hover:bg-primary/10 group-hover:text-primary">
             <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -206,7 +201,6 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
         )}
       </div>
 
-      {/* 3. Middle Section: Big Value & Metric Badge */}
       <div className="flex items-baseline justify-between gap-3 z-10 my-2">
         <span className="text-3xl font-extrabold tracking-tight tabular-nums text-foreground">{value}</span>
 
@@ -218,7 +212,6 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
         )}
       </div>
 
-      {/* 5. Dynamic Background Sparkline */}
       {chartData.length > 0 && (
         <div className="absolute inset-x-0 bottom-0 h-14 opacity-20 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none z-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -235,7 +228,6 @@ function KpiCard({ title, value, change, changeType = "neutral", icon: Icon, hre
         </div>
       )}
 
-      {/* 6. Hover Bottom Accent Line */}
       <div className={cn("absolute bottom-0 inset-x-0 h-[2px] scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left", currentVariant.accentBar)} />
     </Card>
   );
@@ -305,9 +297,6 @@ export function AdminDashboard({ kpis, chartData, ordersByStatus, recentMovement
   // Sparkline للـ KPI cards من بيانات الحركات الحقيقية
   const stockSparkline = chartSlice.map((d) => d.IN);
   const outSparkline = chartSlice.map((d) => d.OUT);
-
-  // Stock health score
-  const stockHealthPercentage = Math.max(0, Math.round(((kpis.totalProducts - kpis.lowStockCount) / (kpis.totalProducts || 1)) * 100));
 
   // Category: أكبر قيمة للـ progress bars
   const maxCategoryCount = Math.max(...categoryDistribution.map((c) => c.count), 1);

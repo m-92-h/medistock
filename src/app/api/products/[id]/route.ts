@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/products/[id]
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -94,13 +94,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({
       product: { ...product, price: Number(product.price) },
     });
-  } catch (error) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
+  } catch (error: unknown) {
+  const message = error instanceof Error ? error.message : "An unexpected error occurred";
+  return NextResponse.json({ error: message }, { status: 500 });
+}
 }
 
 // DELETE /api/products/[id]
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -191,8 +191,8 @@ function EditUserDialog({ user, open, onOpenChange, onSaved, onError }: EditDial
 
       onSaved({ ...user, name: data.user.name, email: data.user.email, role: data.user.role });
       onOpenChange(false);
-    } catch (err: any) {
-      onError(err.message);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSaving(false);
     }
@@ -340,8 +340,12 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-    fetchInvitations();
+    const loadData = async () => {
+      await fetchUsers();
+
+      await fetchInvitations();
+    };
+    loadData();
   }, [fetchUsers, fetchInvitations]);
 
   // ── Delete User ────────────────────────────────────────────────────────────
@@ -355,8 +359,8 @@ export default function UsersPage() {
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       toast.success("User deleted successfully.");
       setDeleteTarget(null);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete user");
       setDeleteTarget(null);
     } finally {
       setDeletingUser(false);
@@ -374,8 +378,8 @@ export default function UsersPage() {
       setInvitations((prev) => prev.filter((i) => i.id !== revokeTarget.id));
       toast.success(`Invitation to ${revokeTarget.email} revoked.`);
       setRevokeTarget(null);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke invitation");
       setRevokeTarget(null);
     } finally {
       setRevokingId(null);
@@ -399,8 +403,8 @@ export default function UsersPage() {
       toast.success(`Invitation sent to ${inviteEmail}.`);
       setInviteEmail("");
       await fetchInvitations();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send invitation");
     } finally {
       setInviting(false);
       setInviteOpen(false);
@@ -519,7 +523,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader className="px-4 pt-4 pb-3 border-b">
           <CardTitle className="text-base font-semibold">All Users</CardTitle>
-          <CardDescription className="text-xs">Click the edit icon to update a user's name, email, or role.</CardDescription>
+          <CardDescription className="text-xs">Click the edit icon to update a user&apos;s name, email, or role.</CardDescription>
         </CardHeader>
 
         <CardContent className="p-0">

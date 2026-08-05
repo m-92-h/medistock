@@ -65,7 +65,6 @@ export async function POST(req: Request) {
       update: { email, name, role },
     });
 
-    // ── ربط المورد بحسابه ────────────────────────────────────────────────
     if (role === "supplier") {
       const supplierRecord = await prisma.supplier.findUnique({
         where: { email },
@@ -79,7 +78,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── إشعار الأدمن عند قبول الدعوة (user.created فقط) ──────────────────
+    // ── إشعار الأدمن عند قبول الدعوة ──────────────────
     if (type === "user.created") {
       const admins = await prisma.user.findMany({
         where: { role: "admin" },
@@ -104,7 +103,7 @@ export async function POST(req: Request) {
           await prisma.alert.createMany({
             data: admins.map((admin) => ({
               type: "GENERAL" as const,
-              message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
+              message: `${displayName} accepted their invitation and joined the system.`,
               userId: admin.id,
             })),
           });

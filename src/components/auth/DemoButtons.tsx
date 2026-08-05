@@ -39,9 +39,7 @@ export function DemoButtons() {
     setLoadingIndex(index);
     setError("");
     try {
-      // 1. استدعاء السيرفر لجلب التذكرة عبر البريد الإلكتروني
       const token = await getDemoSessionToken(email);
-      // 2. إعادة توجيه المتصفح إلى صفحة sign-in مع إرفاق التذكرة كـ Query Parameter
       window.location.href = `/sign-in?__clerk_ticket=${token}`;
     } catch {
       setError("Could not sign in. Please try again.");

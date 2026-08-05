@@ -3,21 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  ShoppingBag,
-  Plus,
-  RefreshCw,
-  Filter,
-  Loader2,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Truck,
-  PackageCheck,
-  Eye,
-  Trash2,
-  Building2,
-} from "lucide-react";
+import { ShoppingBag, Plus, RefreshCw, Filter, Loader2, Clock, CheckCircle2, XCircle, Truck, PackageCheck, Eye, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,25 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 interface OrderItem {
   id: string;
@@ -127,7 +96,7 @@ export default function OrdersPage() {
         setLoading(false);
       }
     },
-    [statusFilter]
+    [statusFilter],
   );
 
   useEffect(() => {
@@ -153,13 +122,14 @@ export default function OrdersPage() {
         description: `Order #${orderToDelete.id.slice(-8).toUpperCase()} has been removed.`,
       });
 
-      // إغلاق الديالوج
       setOrderToDelete(null);
-
-      // تحديث الجدول
       fetchOrders(pagination.page);
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong while deleting");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(err.message || "Something went wrong while deleting");
+      } else {
+        toast.error("Something went wrong while deleting");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -214,20 +184,16 @@ export default function OrdersPage() {
       if (p === 1 || p === pages || (p >= page - 1 && p <= page + 1)) {
         items.push(
           <PaginationItem key={p}>
-            <PaginationLink
-              isActive={p === page}
-              onClick={() => fetchOrders(p)}
-              className="cursor-pointer"
-            >
+            <PaginationLink isActive={p === page} onClick={() => fetchOrders(p)} className="cursor-pointer">
               {p}
             </PaginationLink>
-          </PaginationItem>
+          </PaginationItem>,
         );
       } else if (p === page - 2 || p === page + 2) {
         items.push(
           <PaginationItem key={p}>
             <PaginationEllipsis />
-          </PaginationItem>
+          </PaginationItem>,
         );
       }
     }
@@ -243,9 +209,7 @@ export default function OrdersPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
             <ShoppingBag className="w-8 h-8 text-primary" /> Purchase Orders
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage procurement requests, order approvals, and delivery fulfillment.
-          </p>
+          <p className="text-muted-foreground text-sm mt-1">Manage procurement requests, order approvals, and delivery fulfillment.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -323,9 +287,7 @@ export default function OrdersPage() {
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs font-semibold">
-                      #{order.id.slice(-8).toUpperCase()}
-                    </TableCell>
+                    <TableCell className="font-mono text-xs font-semibold">#{order.id.slice(-8).toUpperCase()}</TableCell>
 
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
 
@@ -336,13 +298,9 @@ export default function OrdersPage() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs text-muted-foreground">
-                      {order.items?.length || 0} product(s)
-                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{order.items?.length || 0} product(s)</TableCell>
 
-                    <TableCell className="text-right font-bold text-sm">
-                      ${calculateTotalAmount(order.items || []).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
+                    <TableCell className="text-right font-bold text-sm">${calculateTotalAmount(order.items || []).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
 
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(order.createdAt).toLocaleDateString("en-US", {
@@ -360,14 +318,8 @@ export default function OrdersPage() {
                           </Button>
                         </Link>
 
-                        {/* إظهار زر الحذف للأدمن فقط */}
                         {userRole === "admin" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setOrderToDelete(order)}
-                          >
+                          <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setOrderToDelete(order)}>
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </Button>
                         )}
@@ -383,24 +335,16 @@ export default function OrdersPage() {
         {/* Pagination */}
         {pagination.pages > 1 && (
           <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => pagination.page > 1 && fetchOrders(pagination.page - 1)}
-                    className={pagination.page <= 1 || loading ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
+                  <PaginationPrevious onClick={() => pagination.page > 1 && fetchOrders(pagination.page - 1)} className={pagination.page <= 1 || loading ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                 </PaginationItem>
 
                 {renderPaginationItems()}
 
                 <PaginationItem>
-                  <PaginationNext
-                    onClick={() => pagination.page < pagination.pages && fetchOrders(pagination.page + 1)}
-                    className={pagination.page >= pagination.pages || loading ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
+                  <PaginationNext onClick={() => pagination.page < pagination.pages && fetchOrders(pagination.page + 1)} className={pagination.page >= pagination.pages || loading ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
@@ -414,20 +358,12 @@ export default function OrdersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete order{" "}
-              <span className="font-mono font-bold text-foreground">
-                #{orderToDelete?.id.slice(-8).toUpperCase()}
-              </span>{" "}
-              and all of its associated items from the database.
+              This action cannot be undone. This will permanently delete order <span className="font-mono font-bold text-foreground">#{orderToDelete?.id.slice(-8).toUpperCase()}</span> and all of its associated items from the database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteOrder}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            >
+            <AlertDialogAction onClick={handleDeleteOrder} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               {isDeleting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" /> Deleting...
