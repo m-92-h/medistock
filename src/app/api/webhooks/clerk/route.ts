@@ -52,10 +52,7 @@ export async function POST(req: Request) {
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
-    const rawRole =
-      (data.public_metadata?.role as string | undefined) ??
-      (data.unsafe_metadata?.role as string | undefined) ??
-      "employee";
+    const rawRole = (data.public_metadata?.role as string | undefined) ?? (data.unsafe_metadata?.role as string | undefined) ?? "employee";
 
     const validRoles: Role[] = ["admin", "employee", "supplier"];
     const role: Role = validRoles.includes(rawRole as Role) ? (rawRole as Role) : "employee";
@@ -90,26 +87,26 @@ export async function POST(req: Request) {
       });
 
       if (admins.length > 0) {
-        const displayName = name || email;
-        const message = `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`;
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-        // الـ uid فريد بطبيعته فلا حاجة لقيد الوقت
         const alreadyNotified = await prisma.alert.findFirst({
           where: {
             type: "GENERAL",
-            message: { contains: `[uid:${data.id}]` },
+            userId: admins[0].id,
+            message: { contains: data.id },
+            createdAt: { gte: fiveMinutesAgo },
           },
           select: { id: true },
         });
 
         if (!alreadyNotified) {
+          const displayName = name || email;
           await prisma.alert.createMany({
             data: admins.map((admin) => ({
               type: "GENERAL" as const,
-              message,
+              message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
               userId: admin.id,
             })),
-            skipDuplicates: true,
           });
         }
       }
