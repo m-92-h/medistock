@@ -37,7 +37,6 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Supplier can only see their own orders
   if (user.role === "supplier") {
     const supplierRecord = await prisma.supplier.findUnique({ where: { userId: user.id } });
     if (!supplierRecord || order.supplierId !== supplierRecord.id) {
@@ -48,7 +47,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json({ order: serializeOrder(order) });
 }
 
-// PATCH /api/orders/[id] — استبدل دالة PATCH كاملةً بهذا:
+// PATCH /api/orders/[id]
 export async function PATCH(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -64,7 +63,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // ✅ فحص ملكية المورد مُدمج داخل منطق الصلاحيات
+  // ── صلاحيات الانتقال ─────────────────────────────────────────────────────
   let allowed = false;
 
   if (user.role === "admin") {
@@ -74,7 +73,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       where: { userId: user.id },
       select: { id: true },
     });
-    // تحقق من الـ role والملكية والـ transition في خطوة واحدة
     allowed =
       !!supplierRecord &&
       order.supplierId === supplierRecord.id &&
@@ -109,8 +107,73 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   });
 
-  // عند التسليم: أنشئ stock movements وحدّث الكميات
+  const orderRef = id.slice(-8).toUpperCase();
+
+  // ── APPROVED: إشعار المورد ───────────────────────────────────────────────
+  if (status === "APPROVED" && order.supplier.userId) {
+    await prisma.alert.create({
+      data: {
+        type: "ORDER",
+        message: `Order #${orderRef} has been approved. Please proceed with shipping.`,
+        userId: order.supplier.userId,
+      },
+    });
+  }
+
+  // ── REJECTED: إشعار المورد + منشئ الطلب ─────────────────────────────────
+  if (status === "REJECTED") {
+    const alertsToCreate: { type: "ORDER"; message: string; userId: string }[] = [];
+
+    // المورد إذا كان لديه حساب
+    if (order.supplier.userId) {
+      alertsToCreate.push({
+        type: "ORDER",
+        message: `Order #${orderRef} has been rejected by the administrator.`,
+        userId: order.supplier.userId,
+      });
+    }
+
+    // منشئ الطلب إذا لم يكن هو الأدمن الذي رفض
+    if (order.createdById !== user.id) {
+      alertsToCreate.push({
+        type: "ORDER",
+        message: `Your order #${orderRef} has been rejected by the administrator.`,
+        userId: order.createdById,
+      });
+    }
+
+    if (alertsToCreate.length > 0) {
+      await prisma.alert.createMany({ data: alertsToCreate });
+    }
+  }
+
+  // ── SHIPPED: إشعار الأدمن + منشئ الطلب (مع تجنب التكرار) ────────────────
+  if (status === "SHIPPED") {
+    const supplierName = order.supplier.name;
+    const recipientIds = new Set<string>();
+
+    // منشئ الطلب دائماً
+    recipientIds.add(order.createdById);
+
+    // كل الأدمن — يضاف فقط من ليس منشئ الطلب (تجنب التكرار)
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: { id: true },
+    });
+    admins.forEach((a) => recipientIds.add(a.id));
+
+    await prisma.alert.createMany({
+      data: Array.from(recipientIds).map((userId) => ({
+        type: "ORDER" as const,
+        message: `Order #${orderRef} has been shipped by supplier "${supplierName}". Awaiting delivery confirmation.`,
+        userId,
+      })),
+    });
+  }
+
+  // ── DELIVERED: stock movements + تحديث الكميات + إشعارات ────────────────
   if (status === "DELIVERED") {
+    // إنشاء حركات المخزون
     await prisma.$transaction(
       order.items.map((item) =>
         prisma.stockMovement.create({
@@ -118,14 +181,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             productId: item.productId,
             type: "IN",
             quantity: item.quantity,
-            note: `Received from order #${id.slice(-8).toUpperCase()}`,
+            note: `Received from order #${orderRef}`,
             userId: user.id,
           },
         })
       )
     );
 
-    await prisma.$transaction(
+    // تحديث الكميات وإرجاع القيم المحدّثة
+    const updatedProducts = await Promise.all(
       order.items.map((item) =>
         prisma.product.update({
           where: { id: item.productId },
@@ -134,47 +198,66 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       )
     );
 
+    // ── إشعار منشئ الطلب بالاستلام ──────────────────────────────────────
     await prisma.alert.create({
       data: {
         type: "ORDER",
-        message: `Order #${id.slice(-8).toUpperCase()} has been delivered and stock has been updated.`,
+        message: `Order #${orderRef} has been delivered and stock has been updated.`,
         userId: order.createdById,
       },
     });
-  }
 
-  // إشعار المورد عند الموافقة
-  if (status === "APPROVED" && order.supplier.userId) {
-    await prisma.alert.create({
-      data: {
-        type: "ORDER",
-        message: `Order #${id.slice(-8).toUpperCase()} has been approved. Please proceed with shipping.`,
-        userId: order.supplier.userId,
-      },
-    });
-  }
+    // ── فحص Low Stock بعد تحديث الكميات ────────────────────────────────
+    // (نادر لكن ممكن إذا كانت الكمية المضافة أقل من الحد الأدنى)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  // ✅ إضافة ناقصة: إشعار منشئ الطلب عند الشحن
-  if (status === "SHIPPED") {
-    await prisma.alert.create({
-      data: {
-        type: "ORDER",
-        message: `Order #${id.slice(-8).toUpperCase()} has been shipped by the supplier.`,
-        userId: order.createdById,
-      },
-    });
-  }
+    for (const product of updatedProducts) {
+      if (product.quantity <= product.minQuantity) {
+        // تجنب التنبيه المكرر خلال 24 ساعة
+        const recentAlert = await prisma.alert.findFirst({
+          where: {
+            productId: product.id,
+            type: "LOW_STOCK",
+            isRead: false,
+            createdAt: { gte: oneDayAgo },
+          },
+          select: { id: true },
+        });
 
-  // ✅ إضافة ناقصة: إشعار المورد عند الرفض
-  if (status === "REJECTED" && order.supplier.userId) {
-    await prisma.alert.create({
-      data: {
-        type: "ORDER",
-        message: `Order #${id.slice(-8).toUpperCase()} has been rejected by the administrator.`,
-        userId: order.supplier.userId,
-      },
-    });
+        if (!recentAlert) {
+          await prisma.alert.create({
+            data: {
+              type: "LOW_STOCK",
+              message: `Low stock after delivery: "${product.name}" has ${product.quantity} units remaining (min: ${product.minQuantity}).`,
+              productId: product.id,
+              // userId: null → global (يراه الأدمن + الموظف)
+            },
+          });
+        }
+      }
+    }
   }
 
   return NextResponse.json({ order: serializeOrder(updatedOrder) });
+}
+
+// DELETE /api/orders/[id]
+export async function DELETE(_req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.isDemo) return NextResponse.json({ error: "Demo accounts are read-only." }, { status: 403 });
+
+  const { id } = await params;
+
+  const order = await prisma.order.findUnique({ where: { id } });
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+  if (user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden: Only administrators can delete orders" }, { status: 403 });
+  }
+
+  await prisma.orderItem.deleteMany({ where: { orderId: id } });
+  await prisma.order.delete({ where: { id } });
+
+  return NextResponse.json({ success: true, message: "Order deleted successfully" });
 }

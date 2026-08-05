@@ -47,14 +47,12 @@ export async function POST(req: Request) {
 
   const { type, data } = event;
 
+  // ── user.created / user.updated ──────────────────────────────────────────
   if (type === "user.created" || type === "user.updated") {
     const email = data.email_addresses[0]?.email_address;
     if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
 
-    const rawRole =
-      (data.public_metadata?.role as string | undefined) ??
-      (data.unsafe_metadata?.role as string | undefined) ??
-      "employee";
+    const rawRole = (data.public_metadata?.role as string | undefined) ?? (data.unsafe_metadata?.role as string | undefined) ?? "employee";
 
     const validRoles: Role[] = ["admin", "employee", "supplier"];
     const role: Role = validRoles.includes(rawRole as Role) ? (rawRole as Role) : "employee";
@@ -67,14 +65,12 @@ export async function POST(req: Request) {
       update: { email, name, role },
     });
 
-    // ✅ الإصلاح الرئيسي: ربط المورد بحسابه عند التسجيل أو التحديث
+    // ── ربط المورد بحسابه ────────────────────────────────────────────────
     if (role === "supplier") {
       const supplierRecord = await prisma.supplier.findUnique({
         where: { email },
         select: { id: true, userId: true },
       });
-
-      // اربط فقط إذا كان الـ Supplier موجوداً وغير مربوط بأي مستخدم آخر
       if (supplierRecord && !supplierRecord.userId) {
         await prisma.supplier.update({
           where: { email },
@@ -83,7 +79,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // إشعار الأدمن عند قبول الدعوة
+    // ── إشعار الأدمن عند قبول الدعوة (user.created فقط) ──────────────────
     if (type === "user.created") {
       const admins = await prisma.user.findMany({
         where: { role: "admin" },
@@ -91,20 +87,34 @@ export async function POST(req: Request) {
       });
 
       if (admins.length > 0) {
-        const displayName = name || email;
-        await prisma.alert.createMany({
-          data: admins.map((admin) => ({
-            type: "GENERAL" as const,
-            message: `${displayName} accepted their invitation and joined the system.`,
-            userId: admin.id,
-          })),
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+        const alreadyNotified = await prisma.alert.findFirst({
+          where: {
+            type: "GENERAL",
+            userId: admins[0].id,
+            message: { contains: data.id },
+            createdAt: { gte: fiveMinutesAgo },
+          },
+          select: { id: true },
         });
+
+        if (!alreadyNotified) {
+          const displayName = name || email;
+          await prisma.alert.createMany({
+            data: admins.map((admin) => ({
+              type: "GENERAL" as const,
+              message: `${displayName} accepted their invitation and joined the system. [uid:${data.id}]`,
+              userId: admin.id,
+            })),
+          });
+        }
       }
     }
   }
 
+  // ── user.deleted ──────────────────────────────────────────────────────────
   if (type === "user.deleted") {
-    // ✅ فك الربط من Supplier قبل حذف المستخدم لتجنب cascade error
     await prisma.supplier.updateMany({
       where: { userId: data.id },
       data: { userId: null },

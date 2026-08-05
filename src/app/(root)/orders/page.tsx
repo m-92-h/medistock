@@ -3,12 +3,47 @@
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ShoppingBag, Plus, RefreshCw, Filter, ChevronLeft, ChevronRight, Loader2, Clock, CheckCircle2, XCircle, Truck, PackageCheck, Eye, Building2 } from "lucide-react";
+import {
+  ShoppingBag,
+  Plus,
+  RefreshCw,
+  Filter,
+  Loader2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Truck,
+  PackageCheck,
+  Eye,
+  Trash2,
+  Building2,
+} from "lucide-react";
+import { toast } from "sonner";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 
 interface OrderItem {
   id: string;
@@ -40,7 +75,7 @@ interface Order {
   items: OrderItem[];
 }
 
-interface Pagination {
+interface PaginationState {
   page: number;
   limit: number;
   total: number;
@@ -52,9 +87,9 @@ export default function OrdersPage() {
   const userRole = clerkUser?.publicMetadata?.role as string | undefined;
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
+  const [pagination, setPagination] = useState<PaginationState>({
     page: 1,
-    limit: 20,
+    limit: 10,
     total: 0,
     pages: 1,
   });
@@ -63,13 +98,17 @@ export default function OrdersPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
+  // Delete State
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchOrders = useCallback(
     async (pageNum = 1) => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
         params.set("page", pageNum.toString());
-        params.set("limit", "20");
+        params.set("limit", "10");
 
         if (statusFilter !== "ALL") {
           params.set("status", statusFilter);
@@ -79,20 +118,52 @@ export default function OrdersPage() {
         if (res.ok) {
           const data = await res.json();
           setOrders(data.orders || []);
-          setPagination(data.pagination || { page: 1, limit: 20, total: 0, pages: 1 });
+          setPagination(data.pagination || { page: 1, limit: 10, total: 0, pages: 1 });
         }
       } catch (err) {
         console.error("Failed to fetch orders:", err);
+        toast.error("Failed to fetch orders");
       } finally {
         setLoading(false);
       }
     },
-    [statusFilter],
+    [statusFilter]
   );
 
   useEffect(() => {
     fetchOrders(1);
   }, [fetchOrders]);
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`/api/orders/${orderToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete order");
+      }
+
+      toast.success("Order deleted successfully", {
+        description: `Order #${orderToDelete.id.slice(-8).toUpperCase()} has been removed.`,
+      });
+
+      // إغلاق الديالوج
+      setOrderToDelete(null);
+
+      // تحديث الجدول
+      fetchOrders(pagination.page);
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong while deleting");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getStatusBadge = (status: Order["status"]) => {
     switch (status) {
@@ -132,8 +203,37 @@ export default function OrdersPage() {
   };
 
   const calculateTotalAmount = (items: OrderItem[]) => {
-  return items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
-};
+    return items.reduce((acc, item) => acc + Number(item.quantity) * Number(item.unitPrice), 0);
+  };
+
+  const renderPaginationItems = () => {
+    const { page, pages } = pagination;
+    const items = [];
+
+    for (let p = 1; p <= pages; p++) {
+      if (p === 1 || p === pages || (p >= page - 1 && p <= page + 1)) {
+        items.push(
+          <PaginationItem key={p}>
+            <PaginationLink
+              isActive={p === page}
+              onClick={() => fetchOrders(p)}
+              className="cursor-pointer"
+            >
+              {p}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      } else if (p === page - 2 || p === page + 2) {
+        items.push(
+          <PaginationItem key={p}>
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+    }
+
+    return items;
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -143,7 +243,9 @@ export default function OrdersPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
             <ShoppingBag className="w-8 h-8 text-primary" /> Purchase Orders
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage procurement requests, order approvals, and delivery fulfillment.</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage procurement requests, order approvals, and delivery fulfillment.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -221,7 +323,9 @@ export default function OrdersPage() {
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs font-semibold">#{order.id.slice(-8).toUpperCase()}</TableCell>
+                    <TableCell className="font-mono text-xs font-semibold">
+                      #{order.id.slice(-8).toUpperCase()}
+                    </TableCell>
 
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
 
@@ -232,9 +336,13 @@ export default function OrdersPage() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs text-muted-foreground">{order.items?.length || 0} product(s)</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {order.items?.length || 0} product(s)
+                    </TableCell>
 
-                    <TableCell className="text-right font-bold text-sm">${calculateTotalAmount(order.items || []).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right font-bold text-sm">
+                      ${calculateTotalAmount(order.items || []).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </TableCell>
 
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(order.createdAt).toLocaleDateString("en-US", {
@@ -245,11 +353,25 @@ export default function OrdersPage() {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <Link href={`/orders/${order.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
-                          <Eye className="w-3.5 h-3.5" /> View
-                        </Button>
-                      </Link>
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/orders/${order.id}`}>
+                          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </Button>
+                        </Link>
+
+                        {/* إظهار زر الحذف للأدمن فقط */}
+                        {userRole === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setOrderToDelete(order)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -260,21 +382,63 @@ export default function OrdersPage() {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="p-4 border-t flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Page {pagination.page} of {pagination.pages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="h-8" onClick={() => fetchOrders(pagination.page - 1)} disabled={pagination.page <= 1 || loading}>
-                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-              </Button>
-              <Button variant="outline" size="sm" className="h-8" onClick={() => fetchOrders(pagination.page + 1)} disabled={pagination.page >= pagination.pages || loading}>
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
+          <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+          
+
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => pagination.page > 1 && fetchOrders(pagination.page - 1)}
+                    className={pagination.page <= 1 || loading ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {renderPaginationItems()}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => pagination.page < pagination.pages && fetchOrders(pagination.page + 1)}
+                    className={pagination.page >= pagination.pages || loading ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && !isDeleting && setOrderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete order{" "}
+              <span className="font-mono font-bold text-foreground">
+                #{orderToDelete?.id.slice(-8).toUpperCase()}
+              </span>{" "}
+              and all of its associated items from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteOrder}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Deleting...
+                </>
+              ) : (
+                "Delete Order"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

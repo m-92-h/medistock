@@ -25,7 +25,6 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")));
   const skip = (page - 1) * limit;
 
-  // Suppliers only see orders assigned to their supplier record
   let supplierFilter: string | undefined;
   if (user.role === "supplier") {
     const supplierRecord = await prisma.supplier.findUnique({
@@ -63,9 +62,9 @@ export async function GET(req: NextRequest) {
   ]);
 
   return NextResponse.json({
-  orders: orders.map(serializeOrder),
-  pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-});
+    orders: orders.map(serializeOrder),
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+  });
 }
 
 // POST /api/orders
@@ -85,7 +84,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validate items
   for (const item of items) {
     if (!item.productId || !item.quantity || !item.unitPrice) {
       return NextResponse.json(
@@ -125,15 +123,36 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Alert for supplier if linked to a user account
+  const orderRef = order.id.slice(-8).toUpperCase();
+  const creatorName = user.name || user.email;
+
+  // ── إشعار المورد إذا كان لديه حساب مرتبط ──────────────────────────────
   if (supplier.userId) {
     await prisma.alert.create({
       data: {
         type: "ORDER",
-        message: `New purchase order #${order.id.slice(-8).toUpperCase()} requires your attention.`,
+        message: `New purchase order #${orderRef} has been created and requires your attention.`,
         userId: supplier.userId,
       },
     });
+  }
+
+  // ── إشعار الأدمن بالطلب الجديد (فقط إذا لم يكن المنشئ أدمناً) ─────────
+  if (user.role !== "admin") {
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: { id: true },
+    });
+
+    if (admins.length > 0) {
+      await prisma.alert.createMany({
+        data: admins.map((admin) => ({
+          type: "ORDER" as const,
+          message: `${creatorName} created a new purchase order #${orderRef} from supplier "${supplier.name}".`,
+          userId: admin.id,
+        })),
+      });
+    }
   }
 
   return NextResponse.json({ order: serializeOrder(order) }, { status: 201 });

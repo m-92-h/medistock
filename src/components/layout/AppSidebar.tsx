@@ -1,14 +1,27 @@
 "use client";
 
+// المسار: src/components/layout/AppSidebar.tsx
+// استبدل الملف الحالي بهذا الكامل
+// التغيير: حذف useEffect المستقل لجلب عدد التنبيهات
+//           واستبداله بـ useAlerts() من Context المشترك
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { LayoutDashboard, Package, ArrowLeftRight, ShoppingCart, Bell, Tags, Truck, BarChart3, Users, type LucideIcon } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
+import {
+  LayoutDashboard, Package, ArrowLeftRight, ShoppingCart,
+  Bell, Tags, Truck, BarChart3, Users, type LucideIcon,
+} from "lucide-react";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+  SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
+  SidebarMenu, SidebarMenuBadge, SidebarMenuButton,
+  SidebarMenuItem, SidebarRail,
+} from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useAlerts } from "@/components/providers/alerts-context";
 
 type Role = "admin" | "employee" | "supplier";
 
@@ -17,14 +30,10 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   roles: Role[];
-  badge?: string;
+  showAlertBadge?: boolean;
 }
 
-const navGroups: {
-  label: string;
-  roles: Role[];
-  items: NavItem[];
-}[] = [
+const navGroups: { label: string; roles: Role[]; items: NavItem[] }[] = [
   {
     label: "Overview",
     roles: ["admin", "employee", "supplier"],
@@ -58,6 +67,7 @@ const navGroups: {
         href: "/alerts",
         icon: Bell,
         roles: ["admin", "employee"],
+        showAlertBadge: true, // ← هذا العنصر فقط يُظهر badge التنبيهات
       },
     ],
   },
@@ -83,74 +93,35 @@ const navGroups: {
     label: "Management",
     roles: ["admin"],
     items: [
-      {
-        label: "Categories",
-        href: "/categories",
-        icon: Tags,
-        roles: ["admin"],
-      },
-      {
-        label: "Suppliers",
-        href: "/suppliers",
-        icon: Truck,
-        roles: ["admin"],
-      },
-      {
-        label: "Reports",
-        href: "/reports",
-        icon: BarChart3,
-        roles: ["admin"],
-      },
-      {
-        label: "Users",
-        href: "/users",
-        icon: Users,
-        roles: ["admin"],
-      },
+      { label: "Categories", href: "/categories", icon: Tags,      roles: ["admin"] },
+      { label: "Suppliers",  href: "/suppliers",  icon: Truck,     roles: ["admin"] },
+      { label: "Reports",    href: "/reports",    icon: BarChart3, roles: ["admin"] },
+      { label: "Users",      href: "/users",      icon: Users,     roles: ["admin"] },
     ],
   },
 ];
 
 const roleMeta: Record<Role, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  admin: { label: "Administrator", variant: "default" },
+  admin:    { label: "Administrator",   variant: "default"   },
   employee: { label: "Warehouse Staff", variant: "secondary" },
-  supplier: { label: "Supplier", variant: "outline" },
+  supplier: { label: "Supplier",        variant: "outline"   },
 };
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { sessionClaims } = useAuth();
   const role = (sessionClaims?.metadata as { role?: string })?.role as Role | undefined;
-  const [alertCount, setAlertCount] = useState<number>(0);
 
-  useEffect(() => {
-    fetch("/api/alerts?limit=10")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.alerts) {
-          const unread = data.alerts.filter((a: any) => !a.isRead).length;
-          setAlertCount(unread);
-        }
-      })
-      .catch(() => {
-        // Silent fallback if API is unavailable
-      });
-  }, []);
+  // ← عدد التنبيهات من Context المشترك مع Navbar (لا fetch مستقل هنا)
+  const { unreadCount } = useAlerts();
 
   const visibleGroups = navGroups
-    .filter((group) => role && group.roles.includes(role))
-    .map((group) => ({
-      ...group,
-      items: group.items
-        .map((item) => {
-          if (item.label === "Alerts" && alertCount > 0) {
-            return { ...item, badge: String(alertCount) };
-          }
-          return item;
-        })
-        .filter((item) => role && item.roles.includes(role)),
+    .filter((g) => role && g.roles.includes(role))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => role && item.roles.includes(role)),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((g) => g.items.length > 0);
 
   return (
     <Sidebar collapsible="icon" side="left">
@@ -167,26 +138,39 @@ export function AppSidebar() {
       <SidebarContent className="py-3">
         {visibleGroups.map((group, groupIndex) => (
           <SidebarGroup key={group.label} className={cn(groupIndex > 0 && "mt-1")}>
-            <SidebarGroupLabel className="px-2 text-xs font-medium uppercase tracking-widest text-muted-foreground/60">{group.label}</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-2 text-xs font-medium uppercase tracking-widest text-muted-foreground/60">
+              {group.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   const Icon = item.icon;
+                  const badge = item.showAlertBadge && unreadCount > 0 ? String(unreadCount) : undefined;
 
                   return (
                     <SidebarMenuItem key={item.href + item.label}>
                       <SidebarMenuButton
                         isActive={isActive}
                         tooltip={item.label}
-                        className={cn("h-8 my-0.5 rounded-lg transition-all", isActive ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground")}
+                        className={cn(
+                          "h-8 my-0.5 rounded-lg transition-all",
+                          isActive
+                            ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                        )}
                       >
                         <Link href={item.href} className="flex items-center gap-2 w-full">
                           <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
                           <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {item.badge && <SidebarMenuBadge className="bg-destructive/10 text-destructive text-xs font-medium">{item.badge}</SidebarMenuBadge>}
+
+                      {badge && (
+                        <SidebarMenuBadge className="bg-destructive/10 text-destructive text-xs font-medium">
+                          {badge}
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}
@@ -196,7 +180,7 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className="border-b border-sidebar-border p-3">
         {role && (
           <div className="group-data-[collapsible=icon]:hidden px-1">
             <Badge variant={roleMeta[role].variant} className="text-xs font-medium w-full justify-center py-1">
